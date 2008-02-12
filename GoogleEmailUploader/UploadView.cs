@@ -36,7 +36,7 @@ namespace GoogleEmailUploader {
 
     Label uploadedMailCountLabel;
     Label failedMailCountLabel;
-    Label importInfo;
+    Label uploadInfo;
 
     Label messageLabel;
 
@@ -72,12 +72,12 @@ namespace GoogleEmailUploader {
     void InitializeComponent() {
       this.SuspendLayout();
 
-      // Import Info Label.
-      this.importInfo = new Label();
-      this.importInfo.Location = new Point(35, 55);
-      this.importInfo.Size = new Size(180, 30);
-      this.importInfo.Font = new Font("Arial", 9.25F, FontStyle.Bold);
-      this.importInfo.Text = string.Empty;
+      // Upload Info Label.
+      this.uploadInfo = new Label();
+      this.uploadInfo.Location = new Point(35, 55);
+      this.uploadInfo.Size = new Size(180, 30);
+      this.uploadInfo.Font = new Font("Arial", 9.25F, FontStyle.Bold);
+      this.uploadInfo.Text = string.Empty;
 
       // Upload Progress Bar.
       this.uploadProgressBar = new ProgressBar();
@@ -93,7 +93,7 @@ namespace GoogleEmailUploader {
       // Uploaded Value Label
       this.uploadedMailCountLabel = new Label();
       this.uploadedMailCountLabel.Location = new Point(35, 105);
-      this.uploadedMailCountLabel.Size = new Size(250, 30);
+      this.uploadedMailCountLabel.Size = new Size(250, 15);
       this.uploadedMailCountLabel.ForeColor = Color.FromArgb(166, 166, 166);
       this.uploadedMailCountLabel.Font = new Font("Arial", 9.25F);
       this.uploadedMailCountLabel.Text = string.Empty;
@@ -148,17 +148,16 @@ namespace GoogleEmailUploader {
           new EventHandler(this.pauseResumeButton_Click);
 
       // Cancel Button.
-      Button abortButton = new Button();
-      abortButton.Location = new Point(120, 287);
-      abortButton.Size = new Size(72, 23);
-      abortButton.Font = new Font("Arial", 9.25F);
-      abortButton.Text = Resources.AbortText;
-      abortButton.BackColor = SystemColors.Control;
-      abortButton.ForeColor = Color.Red;
-      abortButton.Click += new EventHandler(abortButton_Click);
+      Button stopButton = new Button();
+      stopButton.Location = new Point(120, 287);
+      stopButton.Size = new Size(72, 23);
+      stopButton.Font = new Font("Arial", 9.25F);
+      stopButton.Text = Resources.StopText;
+      stopButton.BackColor = SystemColors.Control;
+      stopButton.Click += new EventHandler(abortButton_Click);
 
-      this.createImportDialogHeader();
-      this.Controls.Add(importInfo);
+      this.createUploadDialogHeader();
+      this.Controls.Add(uploadInfo);
       this.Controls.Add(this.uploadProgressBar);
       this.Controls.Add(this.uploadedMailCountLabel);
       this.Controls.Add(this.failedMailCountLabel);
@@ -167,14 +166,14 @@ namespace GoogleEmailUploader {
       this.Controls.Add(noteLabel);
       this.Controls.Add(uploadInstructionLabel);
       this.Controls.Add(this.pauseResumeButton);
-      this.Controls.Add(abortButton);
+      this.Controls.Add(stopButton);
 
       // Show the layout.
       this.ResumeLayout(false);
       this.PerformLayout();
     }
 
-    void createImportDialogHeader() {
+    void createUploadDialogHeader() {
       Font defaultFont = new Font("Arial", 9.5F);
       Font separatorFont = new Font("Arial", 12F);
       Color backColor = Color.FromArgb(229, 240, 254);
@@ -213,8 +212,8 @@ namespace GoogleEmailUploader {
       separator2.Text = Resources.SeparatorText;
 
       Label labelLabel = new Label();
-      labelLabel.Location = new Point(167, 24);
-      labelLabel.Size = new Size(42, 15);
+      labelLabel.Location = new Point(165, 24);
+      labelLabel.Size = new Size(44, 15);
       labelLabel.BackColor = backColor;
       labelLabel.Font = defaultFont;
       labelLabel.ForeColor = foreColor;
@@ -228,12 +227,12 @@ namespace GoogleEmailUploader {
       separator3.ForeColor = foreColor;
       separator3.Text = Resources.SeparatorText;
 
-      Label importLabel = new Label();
-      importLabel.Location = new Point(221, 24);
-      importLabel.Size = new Size(46, 15);
-      importLabel.BackColor = backColor;
-      importLabel.Font = new Font(defaultFont, FontStyle.Bold);
-      importLabel.Text = Resources.ImportHeaderText;
+      Label uploadLabel = new Label();
+      uploadLabel.Location = new Point(221, 24);
+      uploadLabel.Size = new Size(50, 15);
+      uploadLabel.BackColor = backColor;
+      uploadLabel.Font = new Font(defaultFont, FontStyle.Bold);
+      uploadLabel.Text = Resources.UploadHeaderText;
 
       this.Controls.Add(signInLabel);
       this.Controls.Add(separator1);
@@ -241,7 +240,7 @@ namespace GoogleEmailUploader {
       this.Controls.Add(separator2);
       this.Controls.Add(labelLabel);
       this.Controls.Add(separator3);
-      this.Controls.Add(importLabel);
+      this.Controls.Add(uploadLabel);
     }
 
     void HookModelEvents() {
@@ -294,44 +293,74 @@ namespace GoogleEmailUploader {
 
       this.Controls.Clear();
       this.BackgroundImage =
-          Resources.GoogleEmailUploaderImportCompleteBackgroundImage;
+          Resources.GoogleEmailUploaderUploadCompleteBackgroundImage;
 
-      Label importCompleteHeaderLabel = new Label();
-      importCompleteHeaderLabel.Location = new Point(60, 23);
-      importCompleteHeaderLabel.Size = new Size(140, 20);
-      importCompleteHeaderLabel.Font = new Font("Arial", 11F, FontStyle.Bold);
-      importCompleteHeaderLabel.BackColor = Color.FromArgb(229, 240, 254);
+      Label uploadCompleteHeaderLabel = new Label();
+      uploadCompleteHeaderLabel.Location = new Point(60, 23);
+      uploadCompleteHeaderLabel.AutoSize = true;
+      uploadCompleteHeaderLabel.Font = new Font("Arial", 11F, FontStyle.Bold);
+      uploadCompleteHeaderLabel.BackColor = Color.FromArgb(229, 240, 254);
+
+      Label uploadCompleteTextLabel = new Label();
+      uploadCompleteTextLabel.Location = new Point(35, 60);
+      uploadCompleteTextLabel.Size = new Size(250, 45);
+      uploadCompleteTextLabel.Font = new Font("Arial", 9.25F);
 
       if (doneReason == DoneReason.Completed) {
-        importCompleteHeaderLabel.Text = Resources.ImportCompleteHeader;
+        uploadCompleteHeaderLabel.Text = Resources.UploadCompleteHeader;
+        uploadCompleteTextLabel.Text = Resources.UploadCompleteText;
+
+        if (this.googleEmailUploaderModel.FailedMailCount > 0) {
+          string uploadIncompleteMessage =
+              string.Format(Resources.UploadIncompleteHeader,
+                            this.googleEmailUploaderModel.FailedMailCount);
+          uploadCompleteHeaderLabel.Text = uploadIncompleteMessage;
+          uploadCompleteHeaderLabel.ForeColor = Color.Red;
+        }
+
+        Label noteLabel = new Label();
+        noteLabel.Location = new Point(35, 110);
+        noteLabel.Size = new Size(200, 15);
+        noteLabel.Font = new Font("Arial", 9.25F, FontStyle.Bold);
+        noteLabel.Text = Resources.NoteText;
+
+        Label uploadCompleteInfoLabel = new Label();
+        uploadCompleteInfoLabel.Location = new Point(35, 125);
+        uploadCompleteInfoLabel.Size = new Size(250, 30);
+        uploadCompleteInfoLabel.Font = new Font("Arial", 9.25F);
+        uploadCompleteInfoLabel.Text = Resources.UploadCompleteInfo;
+
+        this.Controls.Add(noteLabel);
+        this.Controls.Add(uploadCompleteInfoLabel);
       } else if (doneReason == DoneReason.Aborted) {
-        importCompleteHeaderLabel.ForeColor = Color.Red;
-        importCompleteHeaderLabel.Text = Resources.ImportAbortedHeader;
+        uploadCompleteTextLabel.Text = Resources.UploadAbortedText;
+        uploadCompleteHeaderLabel.ForeColor = Color.Red;
+        uploadCompleteHeaderLabel.Text = Resources.UploadAbortedHeader;
       } else if (doneReason == DoneReason.Unauthorized) {
-        importCompleteHeaderLabel.ForeColor = Color.Red;
-        importCompleteHeaderLabel.Text = Resources.ImportUnauthorizedHeader;
+        uploadCompleteHeaderLabel.ForeColor = Color.Red;
+        uploadCompleteHeaderLabel.Text = Resources.UploadUnauthorizedHeader;
       } else if (doneReason == DoneReason.Forbidden) {
-        importCompleteHeaderLabel.ForeColor = Color.Red;
-        importCompleteHeaderLabel.Text = Resources.ImportForbiddenHeader;
+        uploadCompleteHeaderLabel.ForeColor = Color.Red;
+        uploadCompleteHeaderLabel.Text = Resources.UploadForbiddenHeader;
       }
 
-      Label importCompleteTextLabel = new Label();
-      importCompleteTextLabel.Location = new Point(35, 60);
-      importCompleteTextLabel.Size = new Size(220, 15);
-      importCompleteTextLabel.Font = new Font("Arial", 9.25F);
-      importCompleteTextLabel.Text = Resources.ImportCompleteText;
+      if (this.googleEmailUploaderModel.FailedMailCount > 0) {
+        Label openFileLogCompleteLabel = new Label();
+        openFileLogCompleteLabel.Location = new Point(35, 160);
+        openFileLogCompleteLabel.AutoSize = true;
+        openFileLogCompleteLabel.Font = new Font("Arial", 9.25F);
+        openFileLogCompleteLabel.Text = Resources.ToSeeDetailsText;
 
-      Label noteLabel = new Label();
-      noteLabel.Location = new Point(35, 90);
-      noteLabel.Size = new Size(200, 15);
-      noteLabel.Font = new Font("Arial", 9.25F, FontStyle.Bold);
-      noteLabel.Text = Resources.NoteText;
+        LinkLabel openLogLabel = new LinkLabel();
+        openLogLabel.Location = new Point(187, 160);
+        openLogLabel.Font = new Font("Arial", 9.25F);
+        openLogLabel.AutoSize = true;
+        openLogLabel.Text = Resources.OpenLogText;
+        openLogLabel.Click += new EventHandler(this.openLogLabel_Click);
+        this.Controls.Add(openLogLabel);
 
-      Label importCompleteInfoLabel = new Label();
-      importCompleteInfoLabel.Location = new Point(35, 105);
-      importCompleteInfoLabel.Size = new Size(250, 30);
-      importCompleteInfoLabel.Font = new Font("Arial", 9.25F);
-      importCompleteInfoLabel.Text = Resources.ImportCompleteInfo;
+        this.Controls.Add(openFileLogCompleteLabel);
+      }
 
       Button finishButton = new Button();
       finishButton.Location = new Point(30, 287);
@@ -341,32 +370,8 @@ namespace GoogleEmailUploader {
       finishButton.FlatStyle = FlatStyle.System;
       finishButton.Click += new EventHandler(finishButton_Click);
 
-
-      if (this.googleEmailUploaderModel.FailedMailCount > 0) {
-        importCompleteHeaderLabel.Text = Resources.ImportIncompleteHeader;
-        importCompleteHeaderLabel.ForeColor = Color.Red;
-
-        LinkLabel openLogLabel = new LinkLabel();
-        openLogLabel.Location = new Point(35, 160);
-        openLogLabel.Font = new Font("Arial", 9.25F);
-        openLogLabel.AutoSize = true;
-        openLogLabel.Text = Resources.OpenLogText;
-        openLogLabel.Click += new EventHandler(this.openLogLabel_Click);
-        this.Controls.Add(openLogLabel);
-
-        Label openFileLogCompleteLabel = new Label();
-        openFileLogCompleteLabel.Location = new Point(110, 160);
-        openFileLogCompleteLabel.AutoSize = true;
-        openFileLogCompleteLabel.Font = new Font("Arial", 9.25F);
-        openFileLogCompleteLabel.Text = Resources.ToSeeDetailsText;
-
-        this.Controls.Add(openFileLogCompleteLabel);
-      }
-
-      this.Controls.Add(importCompleteHeaderLabel);
-      this.Controls.Add(importCompleteTextLabel);
-      this.Controls.Add(noteLabel);
-      this.Controls.Add(importCompleteInfoLabel);
+      this.Controls.Add(uploadCompleteHeaderLabel);
+      this.Controls.Add(uploadCompleteTextLabel);
       this.Controls.Add(finishButton);
 
       this.ActiveControl = finishButton;
@@ -464,6 +469,7 @@ namespace GoogleEmailUploader {
                                          mailBatch.MailCount);
           this.Invoke(new StringColorDelegate(this.UpdateMessageLabel),
                       new object[] { message, Color.DarkGreen });
+          this.Invoke(new VoidDelegate(this.UpdateStatistics));
         }
       }
     }
@@ -476,6 +482,7 @@ namespace GoogleEmailUploader {
                                          mailBatch.MailCount);
           this.Invoke(new StringColorDelegate(this.UpdateMessageLabel),
                       new object[] { message, Color.DarkGreen });
+          this.Invoke(new VoidDelegate(this.UpdateStatistics));
         }
       }
     }
@@ -573,9 +580,9 @@ namespace GoogleEmailUploader {
         FolderModel folderModel =
             this.googleEmailUploaderModel.CurrentFolderModel;
         if (folderModel != null) {
-          this.importInfo.Text =
+          this.uploadInfo.Text =
               string.Format(
-                  Resources.ImportInfo,
+                  Resources.UploadInfo,
                   folderModel.ClientModel.DisplayName);
         }
       }

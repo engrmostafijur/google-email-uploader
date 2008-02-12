@@ -75,7 +75,7 @@ Function CheckAlreadyInstalled
    readregstr $1 HKLM "${PRODUCT_DIR_REGKEY}" ""
    IfErrors done
    MessageBox MB_OK "There is already a version of GoogleEmailUploader installed, Aborting installation."
-   Abort
+   Quit
 
    done:
    ;continue installation.
@@ -137,7 +137,7 @@ Function CheckDotNetInstalled
   noDotNetInstalled:
     ;Looks like the proper .NETFramework isn't installed.  
     MessageBox MB_OK "You must have v${DOT_MAJOR}.${DOT_MINOR} or greater of the .NETFramework installed.  Aborting!"
-    Abort
+    Quit
  
   yesDotNet:
     ;Everything checks out.  Go on with the rest of the installation.
@@ -160,6 +160,7 @@ Section "MainSection" SEC01
   File "bin.2003\Debug\OutlookExpressClient.dll"
   File "bin.2003\Debug\OutlookExpressClient.pdb"
 !else
+  File "COPYING"
   File "bin.2003\Release\GoogleEmailUploader.exe"
   File "bin.2003\Release\ThunderbirdClient.dll"
   File "bin.2003\Release\OutlookClient.dll"

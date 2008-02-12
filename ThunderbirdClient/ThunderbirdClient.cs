@@ -36,7 +36,26 @@ namespace Google.Thunderbird {
     }
 
     public IClient CreateClient() {
-      return new ThunderbirdClient();
+      if (this.DetectThunderbird()) {
+        return new ThunderbirdClient();
+      } else {
+        return null;
+      }
+    }
+
+    // Detects whether thunderbird exists or not. For checking whether it
+    // exists, we probe HKCU\SOFTWARE\Clients\Mozilla Thunderbird to see if
+    // it exists. If it does then we return true else false is returned.
+    private bool DetectThunderbird() {
+      RegistryKey regKey = Registry.LocalMachine;
+      regKey = regKey.OpenSubKey(
+          "SOFTWARE\\Clients\\Mail\\Mozilla Thunderbird");
+      if (null == regKey) {
+        return false;
+      }
+
+      regKey.Close();
+      return true;
     }
   }
 
@@ -49,17 +68,12 @@ namespace Google.Thunderbird {
       this.profiles = new ArrayList();
       this.stores = new ArrayList();
       this.storeFileNames = new ArrayList();
-      bool doesThunderbirdExist = this.DetectThunderbird();
 
-      // Check if thuderbird is installed. If it is populate the profiles
-      // vector.
-      if (doesThunderbirdExist) {
-        this.PopulateProfiles();
-        foreach (ThunderbirdProfile thunderbirdProfile in this.profiles) {
-          foreach (ThunderbirdStore thunderbirdStore in
-              thunderbirdProfile.GetStores()) {
-            this.stores.Add(thunderbirdStore);
-          }
+      this.PopulateProfiles();
+      foreach (ThunderbirdProfile thunderbirdProfile in this.profiles) {
+        foreach (ThunderbirdStore thunderbirdStore in
+            thunderbirdProfile.GetStores()) {
+          this.stores.Add(thunderbirdStore);
         }
       }
     }
@@ -148,20 +162,6 @@ namespace Google.Thunderbird {
       return false;
     }
 
-    // Detects whether thunderbird exists or not. For checking whether it
-    // exists, we probe HKCU\SOFTWARE\Clients\Mozilla Thunderbird to see if
-    // it exists. If it does then we return true else false is returned.
-    private bool DetectThunderbird() {
-      RegistryKey regKey = Registry.LocalMachine;
-      regKey = regKey.OpenSubKey(
-          "SOFTWARE\\Clients\\Mail\\Mozilla Thunderbird");
-      if ( null == regKey ) {
-        return false;
-      }
-
-      regKey.Close();
-      return true;
-    }
 
     // Populate the profiles vector.
     private void PopulateProfiles() {

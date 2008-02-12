@@ -308,7 +308,8 @@ This is an upload test mail.
         }
         this.batchXmlTextWriter.WriteEndElement();
       }
-      // Write out mail item properties...
+      // Write out mail item properties except IS_TRASH. We will not move
+      // anything to Trash folder as it automatically empties the Trash.
       {
         if (!mail.IsRead) {
           this.batchXmlTextWriter.WriteStartElement("mailItemProperty",
@@ -346,17 +347,11 @@ This is an upload test mail.
                                                        "IS_DRAFT");
           this.batchXmlTextWriter.WriteEndElement();
         }
-        if (MailBatch.IsAncestor(mail.Folder, FolderKind.Trash)) {
-          this.batchXmlTextWriter.WriteStartElement("mailItemProperty",
-                                                    MailBatch.AppsNS);
-          this.batchXmlTextWriter.WriteAttributeString("value",
-                                                       "IS_TRASH");
-          this.batchXmlTextWriter.WriteEndElement();
-        }
       }
+
       // Write out labels...
-      string[] labels = folderModel.Labels;
       {
+        string[] labels = folderModel.Labels;
         for (int i = 0; i < labels.Length; ++i) {
           this.batchXmlTextWriter.WriteStartElement("label",
                                                     MailBatch.AppsNS);
@@ -470,6 +465,15 @@ This is an upload test mail.
       try {
         XmlDocument responseXmlDocument = new XmlDocument();
         responseXmlDocument.Load(responseStream);
+        StringBuilder sb = new StringBuilder(1024);
+        using (StringWriter stringWriter = new StringWriter(sb)) {
+          XmlTextWriter responseXmlTextWriter =
+              new XmlTextWriter(stringWriter);
+          responseXmlTextWriter.Formatting = Formatting.Indented;
+          responseXmlDocument.WriteTo(responseXmlTextWriter);
+          responseXmlTextWriter.Close();
+        }
+        this.responseXml = sb.ToString();
         if (responseXmlDocument.LastChild == null ||
             responseXmlDocument.LastChild.NamespaceURI != MailBatch.AtomNS ||
             responseXmlDocument.LastChild.LocalName !=
@@ -480,6 +484,9 @@ This is an upload test mail.
         if (feedElement == null) {
           return BatchUploadResult.Unknown;
         }
+        string[] failReasonArray = new string[this.mailCount];
+        BatchUploadResult[] batchUploadResultArray =
+            new BatchUploadResult[this.mailCount];
         foreach (XmlNode childNode in feedElement.ChildNodes) {
           if (childNode.LocalName != "entry" ||
               childNode.NamespaceURI != MailBatch.AtomNS) {
@@ -499,8 +506,20 @@ This is an upload test mail.
           if (batchId >= this.mailCount) {
             continue;
           }
+          if (itemUploadResult == BatchUploadResult.ServiceUnavailable) {
+            return BatchUploadResult.ServiceUnavailable;
+          }
+          failReasonArray[batchId] = failueReason;
+          batchUploadResultArray[batchId] = itemUploadResult;
+        }
+        for (int i = 0; i < this.mailCount; ++i) {
+          string failueReason = failReasonArray[i];
+          BatchUploadResult itemUploadResult = batchUploadResultArray[i];
+          if (failueReason == null) {
+            continue;
+          }
           if (itemUploadResult != BatchUploadResult.Created) {
-            ((MailBatchDatum)this.MailBatchData[(int)batchId]).SetFailure(
+            ((MailBatchDatum)this.MailBatchData[i]).SetFailure(
                 failueReason);
           } else {
             this.failedCount--;
@@ -509,15 +528,6 @@ This is an upload test mail.
             batchUploadResult = itemUploadResult;
           }
         }
-        StringBuilder sb = new StringBuilder(1024);
-        using (StringWriter stringWriter = new StringWriter(sb)) {
-          XmlTextWriter responseXmlTextWriter =
-              new XmlTextWriter(stringWriter);
-          responseXmlTextWriter.Formatting = Formatting.Indented;
-          responseXmlDocument.WriteTo(responseXmlTextWriter);
-          responseXmlTextWriter.Close();
-        }
-        this.responseXml = sb.ToString();
         return batchUploadResult;
       } catch (XmlException) {
         return BatchUploadResult.Unknown;
@@ -791,11 +801,11 @@ This is an upload test mail.
           batchUploadResult = this.MailBatch.ProcessResponse(respStream);
           if (batchUploadResult >= BatchUploadResult.BadRequest) {
             this.GoogleEmailUploaderModel.MailBatchUploaded(this.MailBatch,
-                                                     batchUploadResult);
+                                                            batchUploadResult);
             return false;
           } else {
             // Not uploaded. Inform the provider and try again if needed.
-            bool tryAgain = 
+            bool tryAgain =
                 this.GoogleEmailUploaderModel.MailBatchUploadFailure(
                     this.MailBatch,
                     batchUploadResult);
@@ -821,7 +831,7 @@ This is an upload test mail.
             break;
         }
         this.GoogleEmailUploaderModel.HttpRequestFailure(httpException,
-                                                  batchUploadResult);
+                                                         batchUploadResult);
         if (httpException.Response != null) {
           httpException.Response.Close();
         }

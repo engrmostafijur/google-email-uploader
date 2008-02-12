@@ -315,13 +315,13 @@ namespace GoogleEmailUploader {
       separator3.ForeColor = foreColor;
       separator3.Text = Resources.SeparatorText;
 
-      Label importLabel = new Label();
-      importLabel.Location = new Point(221, 24);
-      importLabel.Size = new Size(42, 15);
-      importLabel.ForeColor = foreColor;
-      importLabel.BackColor = backColor;
-      importLabel.Font = defaultFont;
-      importLabel.Text = Resources.ImportHeaderText;
+      Label uploadLabel = new Label();
+      uploadLabel.Location = new Point(221, 24);
+      uploadLabel.Size = new Size(46, 15);
+      uploadLabel.ForeColor = foreColor;
+      uploadLabel.BackColor = backColor;
+      uploadLabel.Font = defaultFont;
+      uploadLabel.Text = Resources.UploadHeaderText;
 
       this.Controls.Add(signInLabel);
       this.Controls.Add(separator1);
@@ -329,7 +329,7 @@ namespace GoogleEmailUploader {
       this.Controls.Add(separator2);
       this.Controls.Add(labelLabel);
       this.Controls.Add(separator3);
-      this.Controls.Add(importLabel);
+      this.Controls.Add(uploadLabel);
     }
 
     void addControlsForNonCustomizedSelectDialog() {
@@ -384,11 +384,10 @@ namespace GoogleEmailUploader {
     }
 
     void UpdateSelectionInfoLabel() {
-      TimeSpan timeSpan = this.googleEmailUploaderModel.UploadTimeRemaining;
       this.selectionInfoLabel.Text =
-          string.Format(Resources.SelectionInfoTemplateText,
+          string.Format(Resources.SelectionInfoTemplateText,  
                         this.googleEmailUploaderModel.SelectedMailCount,
-                        timeSpan.ToString());
+                        this.googleEmailUploaderModel.BallParkEstimate());
     }
 
     void loadedClientsCheckBox_CheckedChanged(object sender, EventArgs e) {
@@ -426,8 +425,7 @@ namespace GoogleEmailUploader {
       // AddAnotherMailbox Label
       this.addAnotherMailbox = new LinkLabel();
       this.addAnotherMailbox.Location = new Point(33, 255);
-      this.addAnotherMailbox.Size = new Size(150, 15);
-      this.addAnotherMailbox.Font = new Font("Arial", 9.25F);
+      this.addAnotherMailbox.AutoSize = true;
       this.addAnotherMailbox.Text = Resources.AddStore;
       this.addAnotherMailbox.Enabled = false;
       this.addAnotherMailbox.Click +=
@@ -512,26 +510,26 @@ namespace GoogleEmailUploader {
 
       Label labelLabel = new Label();
       labelLabel.Location = new Point(167, 24);
-      labelLabel.Size = new Size(44, 15);
+      labelLabel.Size = new Size(46, 15);
       labelLabel.BackColor = backColor;
       labelLabel.Font = new Font("Arial", 9.5F, FontStyle.Bold);
       labelLabel.Text = Resources.LabelHeaderText;
 
       Label separator3 = new Label();
-      separator3.Location = new Point(207, 23);
+      separator3.Location = new Point(210, 23);
       separator3.Size = new Size(11, 15);
       separator3.Font = separatorFont;
       separator3.BackColor = backColor;
       separator3.ForeColor = foreColor;
       separator3.Text = Resources.SeparatorText;
 
-      Label importLabel = new Label();
-      importLabel.Location = new Point(221, 24);
-      importLabel.Size = new Size(42, 15);
-      importLabel.ForeColor = foreColor;
-      importLabel.BackColor = backColor;
-      importLabel.Font = defaultFont;
-      importLabel.Text = Resources.ImportHeaderText;
+      Label uploadLabel = new Label();
+      uploadLabel.Location = new Point(224, 24);
+      uploadLabel.Size = new Size(46, 15);
+      uploadLabel.ForeColor = foreColor;
+      uploadLabel.BackColor = backColor;
+      uploadLabel.Font = defaultFont;
+      uploadLabel.Text = Resources.UploadHeaderText;
 
       this.Controls.Add(signInLabel);
       this.Controls.Add(separator1);
@@ -539,7 +537,7 @@ namespace GoogleEmailUploader {
       this.Controls.Add(separator2);
       this.Controls.Add(labelLabel);
       this.Controls.Add(separator3);
-      this.Controls.Add(importLabel);
+      this.Controls.Add(uploadLabel);
     }
 
     void addControlsForLabelDialog() {
@@ -576,7 +574,7 @@ namespace GoogleEmailUploader {
     void nextButtonInLabelDialog_Click(object sender, EventArgs e) {
       this.Controls.Clear();
 
-      this.nextButton.Text = Resources.ImportText;
+      this.nextButton.Text = Resources.UploadText;
       this.nextButton.Click -=
           new EventHandler(this.nextButtonInLabelDialog_Click);
       this.nextButton.Click +=
@@ -602,7 +600,7 @@ namespace GoogleEmailUploader {
       this.addControlsForConfirmDialog();
     }
 
-    void createImportDialogHeader() {
+    void createUploadDialogHeader() {
       Font defaultFont = new Font("Arial", 9.5F);
       Font separatorFont = new Font("Arial", 12F);
       Color backColor = Color.FromArgb(229, 240, 254);
@@ -641,8 +639,8 @@ namespace GoogleEmailUploader {
       separator2.Text = Resources.SeparatorText;
 
       Label labelLabel = new Label();
-      labelLabel.Location = new Point(167, 24);
-      labelLabel.Size = new Size(42, 15);
+      labelLabel.Location = new Point(165, 24);
+      labelLabel.Size = new Size(44, 15);
       labelLabel.BackColor = backColor;
       labelLabel.Font = defaultFont;
       labelLabel.ForeColor = foreColor;
@@ -656,12 +654,12 @@ namespace GoogleEmailUploader {
       separator3.ForeColor = foreColor;
       separator3.Text = Resources.SeparatorText;
 
-      Label importLabel = new Label();
-      importLabel.Location = new Point(221, 24);
-      importLabel.Size = new Size(46, 15);
-      importLabel.BackColor = backColor;
-      importLabel.Font = new Font(defaultFont, FontStyle.Bold);
-      importLabel.Text = Resources.ImportHeaderText;
+      Label uploadLabel = new Label();
+      uploadLabel.Location = new Point(221, 24);
+      uploadLabel.Size = new Size(50, 15);
+      uploadLabel.BackColor = backColor;
+      uploadLabel.Font = new Font(defaultFont, FontStyle.Bold);
+      uploadLabel.Text = Resources.UploadHeaderText;
 
       this.Controls.Add(signInLabel);
       this.Controls.Add(separator1);
@@ -669,7 +667,7 @@ namespace GoogleEmailUploader {
       this.Controls.Add(separator2);
       this.Controls.Add(labelLabel);
       this.Controls.Add(separator3);
-      this.Controls.Add(importLabel);
+      this.Controls.Add(uploadLabel);
     }
 
     void nextButtonInConfirmDialog_Click(object sender, EventArgs e) {
@@ -699,7 +697,7 @@ namespace GoogleEmailUploader {
     }
 
     void addControlsForConfirmDialog() {
-      this.createImportDialogHeader();
+      this.createUploadDialogHeader();
       this.Controls.Add(this.readyLabel);
       this.Controls.Add(this.confirmInstructionLabel);
       this.Controls.Add(this.backButton);

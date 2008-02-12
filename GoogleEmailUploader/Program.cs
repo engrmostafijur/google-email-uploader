@@ -94,10 +94,8 @@ namespace GoogleEmailUploader {
           // First instance...
           try {
             // Set up tracing facility
-            string assemblyDirectory =
-                Path.GetDirectoryName(typeof(Program).Assembly.Location);
             string traceFilePath =
-                Path.Combine(assemblyDirectory,
+                Path.Combine(Application.LocalUserAppDataPath,
                              "GoogleEmailUploaderTrace.txt");
 
             GoogleEmailUploaderConfig.InitializeConfiguration();
