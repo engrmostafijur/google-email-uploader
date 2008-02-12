@@ -74,13 +74,13 @@ namespace GoogleEmailUploader {
     }
 
     void InitializeComponent() {
-      // ImportToGmail Label.
-      Label importToGmail = new Label();
-      importToGmail.Location = new Point(35, 23);
-      importToGmail.Size = new Size(200, 20);
-      importToGmail.Font = new Font("Arial", 11F, FontStyle.Bold);
-      importToGmail.BackColor = Color.FromArgb(229, 240, 254);
-      importToGmail.Text = Resources.ImportToGmailText;
+      // UploadToGmail Label.
+      Label uploadToGmail = new Label();
+      uploadToGmail.Location = new Point(35, 23);
+      uploadToGmail.Size = new Size(200, 20);
+      uploadToGmail.Font = new Font("Arial", 11F, FontStyle.Bold);
+      uploadToGmail.BackColor = Color.FromArgb(229, 240, 254);
+      uploadToGmail.Text = Resources.UploadToGmailText;
 
       // Instruction Label.
       Label instructionLabel = new Label();
@@ -128,7 +128,7 @@ namespace GoogleEmailUploader {
       this.cancelButton.FlatStyle = FlatStyle.System;
       this.cancelButton.Click += new EventHandler(this.cancelButton_Click);
 
-      this.Controls.Add(importToGmail);
+      this.Controls.Add(uploadToGmail);
       this.Controls.Add(instructionLabel);
       this.Controls.Add(microsoftOutlookLabel);
       this.Controls.Add(outlookExpressLabel);
@@ -330,13 +330,13 @@ namespace GoogleEmailUploader {
       separator3.ForeColor = foreColor;
       separator3.Text = Resources.SeparatorText;
 
-      Label importLabel = new Label();
-      importLabel.Location = new Point(221, 24);
-      importLabel.Size = new Size(42, 15);
-      importLabel.ForeColor = foreColor;
-      importLabel.BackColor = backColor;
-      importLabel.Font = defaultFont;
-      importLabel.Text = Resources.ImportHeaderText;
+      Label uploadLabel = new Label();
+      uploadLabel.Location = new Point(221, 24);
+      uploadLabel.Size = new Size(46, 15);
+      uploadLabel.ForeColor = foreColor;
+      uploadLabel.BackColor = backColor;
+      uploadLabel.Font = defaultFont;
+      uploadLabel.Text = Resources.UploadHeaderText;
 
       this.Controls.Add(signInLabel);
       this.Controls.Add(separator1);
@@ -344,7 +344,7 @@ namespace GoogleEmailUploader {
       this.Controls.Add(separator2);
       this.Controls.Add(labelLabel);
       this.Controls.Add(separator3);
-      this.Controls.Add(importLabel);
+      this.Controls.Add(uploadLabel);
     }
 
     bool IsFormLoginValid() {

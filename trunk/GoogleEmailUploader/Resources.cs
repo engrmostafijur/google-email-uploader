@@ -101,12 +101,6 @@ namespace GoogleEmailUploader {
       }
     }
 
-    internal static string UploadText {
-      get {
-        return Resources.ResourceManager.GetString("UploadText");
-      }
-    }
-
     internal static string NextText {
       get {
         return Resources.ResourceManager.GetString("NextText");
@@ -125,9 +119,9 @@ namespace GoogleEmailUploader {
       }
     }
 
-    internal static string AbortText {
+    internal static string StopText {
       get {
-        return Resources.ResourceManager.GetString("AbortText");
+        return Resources.ResourceManager.GetString("StopText");
       }
     }
 
@@ -146,12 +140,6 @@ namespace GoogleEmailUploader {
     internal static string InstructionsText {
       get {
         return Resources.ResourceManager.GetString("InstructionsText");
-      }
-    }
-
-    internal static string TitleText {
-      get {
-        return Resources.ResourceManager.GetString("TitleText");
       }
     }
 
@@ -234,21 +222,9 @@ namespace GoogleEmailUploader {
       }
     }
 
-    internal static string ImportHeaderText {
-      get {
-        return Resources.ResourceManager.GetString("ImportHeaderText");
-      }
-    }
-
     internal static string SeparatorText {
       get {
         return Resources.ResourceManager.GetString("SeparatorText");
-      }
-    }
-
-    internal static string ConfirmHeaderText {
-      get {
-        return Resources.ResourceManager.GetString("ConfirmHeaderText");
       }
     }
 
@@ -264,15 +240,15 @@ namespace GoogleEmailUploader {
       }
     }
 
-    internal static string ImportText {
+    internal static string UploadText {
       get {
-        return Resources.ResourceManager.GetString("ImportText");
+        return Resources.ResourceManager.GetString("UploadText");
       }
     }
 
-    internal static string ImportInfo {
+    internal static string UploadInfo {
       get {
-        return Resources.ResourceManager.GetString("ImportInfo");
+        return Resources.ResourceManager.GetString("UploadInfo");
       }
     }
 
@@ -367,10 +343,10 @@ namespace GoogleEmailUploader {
       }
     }
 
-    internal static string ImportToGmailText {
+    internal static string UploadToGmailText {
       get {
         return Resources.ResourceManager.GetString(
-            "ImportToGmailText");
+            "UploadToGmailText");
       }
     }
 
@@ -444,66 +420,59 @@ namespace GoogleEmailUploader {
       }
     }
 
-    internal static string TipTitle {
+    internal static string UploadCompleteText {
       get {
         return Resources.ResourceManager.GetString(
-            "TipTitle");
+            "UploadCompleteText");
       }
     }
 
-    internal static string TipText {
+    internal static string UploadAbortedText {
       get {
         return Resources.ResourceManager.GetString(
-            "TipText");
+            "UploadAbortedText");
       }
     }
 
-    internal static string ImportCompleteText {
+    internal static string UploadCompleteHeader {
       get {
         return Resources.ResourceManager.GetString(
-            "ImportCompleteText");
+            "UploadCompleteHeader");
       }
     }
 
-    internal static string ImportCompleteHeader {
+    internal static string UploadCompleteInfo {
       get {
         return Resources.ResourceManager.GetString(
-            "ImportCompleteHeader");
+            "UploadCompleteInfo");
       }
     }
 
-    internal static string ImportCompleteInfo {
+    internal static string UploadIncompleteHeader {
       get {
         return Resources.ResourceManager.GetString(
-            "ImportCompleteInfo");
+            "UploadIncompleteHeader");
       }
     }
 
-    internal static string ImportIncompleteHeader {
+    internal static string UploadAbortedHeader {
       get {
         return Resources.ResourceManager.GetString(
-            "ImportIncompleteHeader");
+            "UploadAbortedHeader");
       }
     }
 
-    internal static string ImportAbortedHeader {
+    internal static string UploadForbiddenHeader {
       get {
         return Resources.ResourceManager.GetString(
-            "ImportAbortedHeader");
+            "UploadForbiddenHeader");
       }
     }
 
-    internal static string ImportForbiddenHeader {
+    internal static string UploadUnauthorizedHeader {
       get {
         return Resources.ResourceManager.GetString(
-            "ImportForbiddenHeader");
-      }
-    }
-
-    internal static string ImportUnauthorizedHeader {
-      get {
-        return Resources.ResourceManager.GetString(
-            "ImportUnauthorizedHeader");
+            "UploadUnauthorizedHeader");
       }
     }
 
@@ -518,13 +487,6 @@ namespace GoogleEmailUploader {
       get {
         return Resources.ResourceManager.GetString(
             "AbortWaitingText");
-      }
-    }
-
-    internal static string ErrorHeaderText {
-      get {
-        return Resources.ResourceManager.GetString(
-            "ErrorHeaderText");
       }
     }
 
@@ -563,14 +525,70 @@ namespace GoogleEmailUploader {
       }
     }
 
-    // Add icons here...
-
-    internal static Image WarningImage {
+    internal static string LessThan10Mins {
       get {
-        object obj = Resources.ResourceManager.GetObject("WarningImage");
-        return (Image)obj;
+        return Resources.ResourceManager.GetString(
+            "LessThan10Mins");
       }
     }
+
+    internal static string LessThan30Mins {
+      get {
+        return Resources.ResourceManager.GetString(
+            "LessThan30Mins");
+      }
+    }
+
+    internal static string LessThan1Hour {
+      get {
+        return Resources.ResourceManager.GetString(
+            "LessThan1Hour");
+      }
+    }
+
+    internal static string Between1To3Hours {
+      get {
+        return Resources.ResourceManager.GetString(
+            "Between1To3Hours");
+      }
+    }
+
+    internal static string Between3To5Hours {
+      get {
+        return Resources.ResourceManager.GetString(
+            "Between3To5Hours");
+      }
+    }
+
+    internal static string Between5To10Hours {
+      get {
+        return Resources.ResourceManager.GetString(
+            "Between5To10Hours");
+      }
+    }
+
+    internal static string Between10To15Hours {
+      get {
+        return Resources.ResourceManager.GetString(
+            "Between10To15Hours");
+      }
+    }
+
+    internal static string Between15To24Hours {
+      get {
+        return Resources.ResourceManager.GetString(
+            "Between15To24Hours");
+      }
+    }
+
+    internal static string MoreThanDay {
+      get {
+        return Resources.ResourceManager.GetString(
+            "MoreThanDay");
+      }
+    }
+
+    // Add icons here...
 
     internal static Image GoogleEmailUploaderBackgroundImage {
       get {
@@ -604,18 +622,10 @@ namespace GoogleEmailUploader {
       }
     }
 
-    internal static Image ProcessBarBackground {
+    internal static Image GoogleEmailUploaderUploadCompleteBackgroundImage {
       get {
         object obj = Resources.ResourceManager.GetObject(
-            "ProgressBarBackground");
-        return (Image)obj;
-      }
-    }
-
-    internal static Image GoogleEmailUploaderImportCompleteBackgroundImage {
-      get {
-        object obj = Resources.ResourceManager.GetObject(
-            "GoogleEmailUploaderImportCompleteBackgroundImage");
+            "GoogleEmailUploaderUploadCompleteBackgroundImage");
         return (Image)obj;
       }
     }

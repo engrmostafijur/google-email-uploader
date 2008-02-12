@@ -27,8 +27,8 @@ namespace GoogleEmailUploader {
   public class GoogleEmailUploaderConfig {
     static int normalMailBatchSize = 2 * 1024 * 1024;
     static int maximumMailBatchSize = 16 * 1024 * 1024;
-    static int minimumPauseTime = 5;  // 5 seconds
-    static int maximumPauseTime = 300;  // 300 seconds
+    static int minimumPauseTime = 30;  // 30 seconds
+    static int maximumPauseTime = 150;  // 150 seconds
     static int failedMailHeadLineCount = 32;
     // TODO(param): After testing is full done need to set this
     // to false by default.
@@ -1219,6 +1219,18 @@ namespace GoogleEmailUploader {
     }
 
     /// <summary>
+    /// Number mails that are remaining to be uploaded.
+    /// </summary>
+    public uint RemainingMailCount {
+      get {
+        Debug.Assert(this.modelState == ModelState.SignedIn ||
+            this.modelState == ModelState.Uploading ||
+            this.modelState == ModelState.UploadingPause);
+        return this.selectedMailCount - this.consideredMailCount;
+      }
+    }
+
+    /// <summary>
     /// Number of mails that failed to be uploaded eiter because of large size
     /// or because they could not be read from the client.
     /// </summary>
@@ -1333,15 +1345,39 @@ namespace GoogleEmailUploader {
       }
     }
 
+    internal string BallParkEstimate() {
+      double remainingTime = 2.0 * this.UploadTimeRemaining.TotalSeconds;
+      if (remainingTime < 10.0 * 60) {
+        return Resources.LessThan10Mins;
+      } else if (remainingTime < 30.0 * 60) {
+        return Resources.LessThan30Mins;
+      } else if (remainingTime < 1.0 * 60 * 60) {
+        return Resources.LessThan1Hour;
+      } else if (remainingTime < 3.0 * 60 * 60) {
+        return Resources.Between1To3Hours;
+      } else if (remainingTime < 5.0 * 60 * 60) {
+        return Resources.Between3To5Hours;
+      } else if (remainingTime < 10.0 * 60 * 60) {
+        return Resources.Between5To10Hours;
+      } else if (remainingTime < 15.0 * 60 * 60) {
+        return Resources.Between10To15Hours;
+      } else if (remainingTime < 24.0 * 60 * 60) {
+        return Resources.Between15To24Hours;
+      } else {
+        return Resources.MoreThanDay;
+      }
+    }
+
     internal void SetUploadSpeed(double uploadSpeed) {
       this.uploadSpeed = uploadSpeed;
     }
 
     internal void UpdateUploadSpeed(uint mailCount,
                                     TimeSpan timeTaken) {
-      double totalTimeTaken = mailCount / this.uploadSpeed +
-          timeTaken.TotalMilliseconds;
-      this.uploadSpeed = 2 * mailCount / totalTimeTaken;
+      double oldTime = this.consideredMailCount / this.uploadSpeed;
+      double totalMails = this.consideredMailCount + mailCount;
+      double totalTimeTaken = oldTime + timeTaken.TotalMilliseconds;
+      this.uploadSpeed = totalMails / totalTimeTaken;
     }
 
     void TimedPauseUpload(PauseReason pauseReason) {

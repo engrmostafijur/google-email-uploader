@@ -91,10 +91,8 @@ namespace GoogleEmailUploader {
     readonly XmlElement userXmlElement;
 
     internal LKGStatePersistor(string emailId) {
-      string assemblyDirectory =
-          Path.GetDirectoryName(this.GetType().Assembly.Location);
       this.lkgStateFilePath =
-          Path.Combine(assemblyDirectory,
+          Path.Combine(Application.LocalUserAppDataPath,
                        "UserData.xml");
       this.emailId = emailId;
       if (!File.Exists(this.lkgStateFilePath)) {
@@ -284,6 +282,9 @@ namespace GoogleEmailUploader {
         string filePath =
             childXmlElement.GetAttribute(LKGStatePersistor.PathAttrName);
         if (filePath == null || filePath.Length == 0) {
+          continue;
+        }
+        if (!File.Exists(filePath)) {
           continue;
         }
         clientModel.OpenStore(filePath);
