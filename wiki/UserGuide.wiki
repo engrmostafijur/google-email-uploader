@@ -89,11 +89,13 @@ Archived mail can be accessed using Gmails "All Mail" view, viewing it by label,
 
 The following example illustrates how original folder locations are converted to labels (assuming the default selection: create labels, do not archive):
 
-  || Folder                                        || Label ||  
-  || Outlook Express/bob@domain.com/Inbox          || Gmail Inbox, Inbox/, from Outlook Express ||
-  || Thunderbird/bob@domain.com/Inbox              || Gmail Inbox, Inbox/, from Thunderbird ||
-  || Outlook Express/bob@domain.com/work           || work/, from Outlook Express ||
-  || Outlook Express/bob@domain.com/work/contracts || work/contracts/, work/, from Outlook Express ||
+
+|| *Folder* || *Label* ||
+|| Outlook Express/bob@domain.com/Inbox || Gmail Inbox, Inbox/, from Outlook Express ||
+|| Thunderbird/bob@domain.com/Inbox || Gmail Inbox, Inbox/, from Thunderbird ||
+|| Outlook Express/bob@domain.com/work || work/, from Outlook Express ||
+|| Outlook Express/bob@domain.com/work/contracts || work/contracts/, work/, from Outlook Express ||
+
 
 ===Step 4: Import===
 
