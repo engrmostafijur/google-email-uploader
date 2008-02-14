@@ -1,14 +1,23 @@
-; Copyright 2007 Google Inc. All Rights Reserved.
-
-; Author <subir@google.com> Subir Jhanb
-; This script is used to create the setup file for GoogleEmailUploader, which guides user 
-; through an install wizard to install the application
+; Copyright 2007 Google Inc.
+;
+; Licensed under the Apache License, Version 2.0 (the "License");
+; you may not use this file except in compliance with the License.
+; You may obtain a copy of the License at
+;
+;      http:;www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+;
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
 
 ; HM NIS Edit Wizard helper defines
 !define PRODUCT_NAME "GoogleEmailUploader"
 !define PRODUCT_VERSION "1.0"
 !define PRODUCT_PUBLISHER "Google Inc."
-!define PRODUCT_WEB_SITE "www.google.com"
+!define PRODUCT_WEB_SITE "code.google.com/p/google-email-uploader"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\GoogleEmailUploader.exe"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
@@ -161,6 +170,7 @@ Section "MainSection" SEC01
   File "bin.2003\Debug\OutlookExpressClient.pdb"
 !else
   File "COPYING"
+  File "EmailUploaderUserGuide.html"
   File "bin.2003\Release\GoogleEmailUploader.exe"
   File "bin.2003\Release\ThunderbirdClient.dll"
   File "bin.2003\Release\OutlookClient.dll"

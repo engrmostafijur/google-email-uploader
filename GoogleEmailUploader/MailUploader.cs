@@ -237,7 +237,8 @@ This is an upload test mail.
           // If its multimail batch let it be almost default mail batch size
           this.mailCount > 0 &&
           this.MemoryStream.Length + rfc822Buffer.Length + 2048
-            <= GoogleEmailUploaderConfig.NormalMailBatchSize
+            <= GoogleEmailUploaderConfig.NormalMailBatchSize &&
+          this.mailCount < GoogleEmailUploaderConfig.MaximumMailsPerBatch
         ) || (
           // If this mail is HUGE then its ok to be in singleton batch.
           this.mailCount == 0 &&
@@ -654,8 +655,6 @@ This is an upload test mail.
   // This class is meant to be used by a single thread.
   // That thread will be blocked at GetAvailableMailBatch or UploadBatch
   class MailUploader {
-    const string MigrationURLTemplate =
-        "https://apps-apis.google.com/a/feeds/migration/2.0/{0}/{1}/mail/batch";
     const string AuthorizationHeaderTag = "Authorization";
     const string GoogleAuthorizationTemplate = "GoogleLogin auth={0}";
     const string ContentType = "application/atom+xml; charset=UTF-8";
@@ -690,7 +689,7 @@ This is an upload test mail.
       this.PauseEvent = new ManualResetEvent(true);
       this.batchMailUploadUrl =
           string.Format(
-              MailUploader.MigrationURLTemplate,
+              GoogleEmailUploaderConfig.EmailMigrationUrl,
               this.DomainName,
               this.UserName);
       this.ApplicationName = applicationName;
