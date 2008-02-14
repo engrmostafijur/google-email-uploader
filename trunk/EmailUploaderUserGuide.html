@@ -1,0 +1,189 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Google Email Uploader User Guide</title>
+<style type="text/css">
+<!--
+.style1 {font-style: italic}
+-->
+</style>
+</head>
+
+<body>
+<h3>Google Email Uploader</h3>
+<h1>User Guide</h1>
+<p><em>(Updated February 13, 2008)</em></p>
+<p>  The Google Email Uploader is a desktop utility that uploads  email from other desktop email programs (like Microsoft Outlook) into  your Google Apps mailbox. The Email Uploader preserves information like  sent dates and sender/recipient data, as well as folder structure or  other organizational tagging devices used by the other email program.</p>
+<p>  If you want to import mail from another web-based mail application, or mail that's stored on mail server, <a href="http://mail.google.com/support/bin/answer.py?hl=en&amp;answer=21288" id="uerc" title="Gmail's Mail Fetcher">Gmail's Mail Fetcher</a> tool may be a better option.</p>
+<p>  The Email Uploader is Apache 2.0 licensed open source software, and is  governed by the terms of the included license file. This also means you  may modify the tool to better suit your needs.</p>
+<h3>Contents:</h3>
+<ul>
+  <li><a href="#requirements">Requirements</a></li>
+  <li><a href="#compatibility">Email Program Compatibility</a></li>
+  <li><a href="#importing">Importing Your Mail</a></li>
+  <li><a href="#troubleshooting">Troubleshooting</a></li>
+  <li><a href="#faq">FAQ</a></li>
+</ul>
+<h2><strong><a name="requirements" id="requirements"></a>Requirements</strong></h2>
+<ul>
+  <li>You must have a Google Apps account for one of the following Google Apps editions:  </li>
+</ul>
+<ol>
+  <ul>
+    <li> Google Apps Premier Edition  </li>
+    <li>Google Apps Education Edition  </li>
+    <li>Google Apps Partner Edition</li>
+  </ul>
+</ol>
+<ul>
+  <li>Your domain administrator must enable end user migration in the  Google Apps administrator console under the Advanced Settings page.</li>
+</ul>
+<h2><strong><a name="compatibility" id="compatibility"></a>Email  Program Compatibility</strong></h2>
+<p>  The Email Uploader is compatible with the following email programs:</p>
+<ul>
+  <li> Microsoft Outlook 2002+ </li>
+  <li> Microsoft Outlook Express 6.0+ </li>
+  <li> Mozilla Thunderbird 1.5+  </li>
+</ul>
+ <em>Note</em><strong>:</strong> Windows Mail on Microsoft Windows Vista is not currently supported.<br />
+<br />
+<h2> <a name="importing" id="importing"></a>Importing Your Mail </h2>
+<p>Before opening the Email Uploader, be sure to close all email programs  such as Microsoft Outlook, Microsoft Outlook Express, or Mozilla  Thunderbird. Having these applications open will interfere with the  migration process.</p>
+<p> Launch the Email Uploader from your Start Menu or desktop. The Email  Uploader is a simple wizard that walks you through the four-step import  process.</p>
+<h3>  Step 1: Sign In</h3>
+<blockquote>
+  <p>  Before uploading can begin, you need to identify the Google Apps  account you want to import your email into, and verify that you have  access to the account. Specify the full qualified email address of your  account, for example: <strong>myname@mydomain.com</strong>.</p>
+  <p>  <em>Note</em>: For your security, your password is not written to disk, but only stored in memory while the Email Uploader is running.</p>
+</blockquote>
+<h3>Step 2: Select Mail</h3>
+<blockquote>
+  <p>The Email Uploader displays a list of email programs from which you can  import mail. You can choose to either import all mail from one or more  of these programs or you can specify a subset to be imported.</p>
+  <p>To import all mail, select the programs you wish to import from. As you  select email programs, the Email Uploader will calculate the amount of  email to be imported and the estimated time to completion. When you've  selected the programs you want to import from, click &quot;Next&quot;.</p>
+  <p>To specify a subset of mail to be imported, click &quot;Customize&quot;.</p>
+  <p><em>Note: </em>To include an archived mailbox, you must use the Customize option.</p>
+</blockquote>
+<h3>Step 2a: Customize Email Selection</h3>
+<blockquote>
+  <p>The Customize option lets you select specific folders in each email  program to import. For example, you might choose to import everything  in your Inbox and in the folders &quot;Home Business&quot; and &quot;Snowboarding&quot; but  not mail in the &quot;Spam&quot; folder.</p>
+  <p>The Email Uploader scans the programs and displays all accounts and  folders for each email program. Click on the email program to expand  the view, and then click on the folders you want to include in the  import. Selected folders are indicated by a check mark.</p>
+  <p>Most email programs let you create an email archive file (such as an  Outlook .PST or Thunderbird .MBOX file) and store it on a backup disk.  To include these archived mailboxes, first select the type of email  program of the archive you want to import. Then, click the link &quot;Add  another mailbox&quot;. Use the Browse window to locate and select the  archived mailbox file. It will be added to the selected email program.</p>
+</blockquote>
+<h3>Step 3: Create Labels</h3>
+<blockquote>
+  <p>Gmail uses a label feature to organize email, rather than a folder  system. Labeling will affect how imported email will appear in your  Gmail account, as well as make it easy for you to identify the origin  and organization of the email after import is complete.</p>
+  <p>There are two choices that affect how labeling is applied: (1) create labels from folder names, and (2) archive everything.</p>
+  <p><em>Create labels from folder names:</em></p>
+  <p>If labels are not created, the following rules are applied:</p>
+  <ol>
+    <li> All imported mail is given a label identifying the source email program, for example: &quot;from Outlook Express&quot;.<br />
+      <br />
+    </li>
+    <li> Mail from a source program's inbox (including subfolders) is placed in the Gmail Inbox.<br />
+      <br />
+    </li>
+    <li> Mail in a &quot;Deleted mail&quot; or &quot;Trash&quot; folder is migrated into a new Gmail  label so that Gmail will not auto-delete the mail. If don't want this  mail, you can exclude it using the customize feature in the previous  step. If you want to delete it once it is uploaded, just select all  emails with this label and 'delete'. </li>
+  </ol>
+  <p>    If labels are created, these additional rules are applied:<br />
+  </p>
+  <ol>
+    <li> Mail in certain common folders are placed in Gmail's special folders. These include &quot;Sent Mail&quot;, &quot;Drafts&quot;, etc.<br />
+      <br />
+    </li>
+    <li> Mail in other folders is given a label with the name of its folder.  Mail in subfolders will have labels for the full path, as well as labels for all parent folders, for  example: &quot;work/projects/Tornado&quot;.<br />
+      <br />
+    </li>
+    <li> Mail from a source program's inbox is given an extra label &quot;Inbox/&quot;.  This extra label allows you to move imported mail out of your Gmail  Inbox folder (that is, archive it) but still be able to see all mail  imported from your old email inbox.<br />
+    </li>
+  </ol>
+  <p><em>Archive everything: </em><br />
+    <br />
+    If all mail is archived, imported mail from a source program's inbox is  not placed in the Gmail Inbox. If labels are created, this email will  still get the &quot;Inbox/&quot; label.<br />
+    <br />
+    Archived mail can be accessed using Gmails &quot;All Mail&quot; view, viewing it by label, or when it is found as part of a search.<br />
+    <br />
+    The following example illustrates how original folder locations are  converted to labels (assuming the default selection: create labels, do  not archive):</p>
+  <table width="523" border="1" cellpadding="2" bordercolor="#999999">
+    <tr>
+      <th width="321" align="left" valign="top" scope="col">Folder</th>
+      <th width="192" align="left" valign="top" scope="col">Labels</th>
+    </tr>
+    <tr>
+      <td align="left" valign="top">Outlook Express/bob@domain.com/Inbox</td>
+      <td align="left" valign="top"><p>Gmail Inbox<br />
+        Inbox/<br />
+        from Outlook Express</p>      </td>
+    </tr>
+    <tr>
+      <td align="left" valign="top">Thunderbird/bob@domain.com/Inbox</td>
+      <td align="left" valign="top"><p>Gmail Inbox<br />
+        Inbox/<br />
+         from Thunderbird</p>      </td>
+    </tr>
+    <tr>
+      <td align="left" valign="top">Outlook Express/bob@domain.com/work</td>
+      <td align="left" valign="top">work/<br />
+        from Outlook Express</td>
+    </tr>
+    <tr>
+      <td align="left" valign="top">Outlook Express/bob@domain.com/work/contracts</td>
+      <td align="left" valign="top">work/contracts/<br /> 
+      work/<br />
+      from Outlook Express</td>
+    </tr>
+  </table>
+</blockquote>
+  <h3>Step 4: Import</h3>
+  <blockquote>
+    <p> Once you've finalized your import options, click &quot;Import&quot; to begin  uploading. The Email Uploader first reads email from your computer and  then begins uploading to Google in batches.</p>
+    <p>    If the tool appears to be stuck, have no fear, each individual batch  upload may take a minute or two. You can minimize the tool to the  system tray and continue working on other tasks.</p>
+    <p>    Once the Email Uploader is completed, it may take up to 48 hours before  all your mail is available in your Google Apps mail, depending on load  and volume.</p>
+  </blockquote>
+  <h3>Step 4a: Resolving errors</h3>
+  <blockquote>
+    <p>    Some email may have failed to upload. Use the Email Uploader troubleshooting tool to see why failures occurred.</p>
+  </blockquote>
+  <h2>    <strong><a name="troubleshooting" id="troubleshooting"></a>Troubleshooting</strong></h2>
+  <p>For additional help, check the <a href="http://groups.google.com/group/google-email-uploader">Google Email Uploader user support group</a>.</p>
+  <p><em>Problem: Upload finishes quickly without actually uploading mail</em></p>
+
+<blockquote>
+  <p>If this is not your first attempt to upload, the Email Uploader may  assume you've already uploaded the given mail. To reset the tool, go to  your Google Email Uploader data directory and clear out the  UserData.xml file (for example:
+    
+    C:\Documents and Settings\bob\Local Settings\Application Data\Google\GoogleEmailUploader\1.0.0.0\UserData.xml).<br />
+  </p>
+</blockquote>
+<p><em>Problem: The program crashes</em></p>
+<blockquote>
+  <p>Check the file GoogleEmailUploaderTrace.txt in the Google Email Uploader data directory (for example: C:\Documents and Settings\bob\Local Settings\Application Data\Google\GoogleEmailUploader\1.0.0.0\GoogleEmailUploaderTrace.txt). Check the user support group for similar issues and resolutions.</p></blockquote>
+  <h2><a name="faq" id="faq"></a>FAQ</h2>
+  <p><em>Q: The Email Uploader is still running from yesterday, but isn't  making any progress. What will happen if I restart the tool now?</em></p>
+  <p>  A: We recommend a restart if you're not seeing any  progress. Restarting the tool will not cause duplicate email to be  imported.</p>
+<p class="style1">    Q: Why does the Email Uploader report different numbers in &quot;message failure&quot; count and in the summary screen?</p>
+  <p>    A: There are two reasons a message can fail to upload: (1) when the  Email Uploader was unable to read a message from the email client, and  (2) when the Email Uploader was unable to upload the message to  Google's migration server. The summary screen does not reflect messages  that couldn't be read from the email client, which include calender  events, tasks, sticky notes, etc.  </p>
+  <p><em>Q: Why is the &quot;Add another mailbox&quot; link disabled on the Customize screen?</em></p>
+  <p>    A: To add another mailbox, you first need to select which email program  you want to add a mailbox for. This option is used to add archived  mail. Once you select an email program, the link becomes active.</p>
+  <p><em>Q: How do I set up a proxy for the Email Uploader?</em></p>
+  <p>    A: Add the following to the GoogleEmailUploader.exe.config file in your  Uploader installation directory. If this file does not exist, create  one.</p>
+<pre>&lt;configuration&gt;
+  &lt;</em>system.net&gt;
+    &lt;defaultProxy&gt;
+      &lt;proxy
+        usesystemdefaults=&quot;true&quot;<br />        proxyaddress=&quot;http://proxyipaddress&quot;
+        bypassonlocal=&quot;true&quot;
+      /&gt;
+    &lt;/defaultProxy&gt;
+  &lt;/system.net&gt;
+&lt;/configuration&gt;</pre>
+  <p><em>  Q: I added a mailbox by mistake. How do I remove it?</em></p>
+  <p>A: Assuming you haven't uploaded your mail yet, go to your Google Email  Uploader data  directory open the UserData.xml file. Remove the entire  &lt;Store ...&gt; element corresponding to the mailbox you want to  remove.  </p>
+  <p><em>Q: What happens if I start an upload but don’t finish it, or if new email is downloaded after I do an import? </em></p>
+  <p>A: The Email Uploader recognizes the previous  state of the upload and restarts from that point., uploading any email  that hasn't yet been migrated. However, changes in your email program,  including different folders structure, newly downloaded mail, etc., may  not be accurately reflected. This is because the Email Uploader is  designed to be used as a one-time migration event. If you've made  significant changes to your email program and want to do a new upload,  go to your Google Email Uploader data directory and clean out the  UserData.xml file. The Email Uploader will rescan your email program  and you'll need to redo the upload configuration process.</p>
+  <p><em>Q: How will I be able to distinguish between imported email and the email I already had in Gmail? </em></p>
+  <p>A: All imported mail will have a label applied  indicating which email client it originated from (for example &quot;from  Outlook Express&quot;.</p>
+  <p><em>Q: Can I pick and choose which emails to import? </em></p>
+  <p>A:  The Mail Uploader reads the folder structure  in your email program and lets you select which folders to import. You  can designate specific emails for import by first going into your email  program and grouping the email you want to import into folders. Then  you can import only those folders containing the emails you want. </p>
+  <p><em>Q: The mail folders I set up in Thunderbird are not showing up in the Email Uploader. How do I import these emails? </em></p>
+  <p>A: If you stored emails in directories outside of  the Thunderbird “Profiles” directory, the Email Uploader does not  detect these files. You can add these directories by adding them as new  Thunderbird mailboxes in the Select Mail customization screen.</p>
+</body>
+</html>

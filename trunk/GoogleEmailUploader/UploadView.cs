@@ -143,7 +143,6 @@ namespace GoogleEmailUploader {
       this.pauseResumeButton.Font = new Font("Arial", 9.25F);
       this.pauseResumeButton.Text = Resources.PauseText;
       this.pauseResumeButton.BackColor = SystemColors.Control;
-      this.pauseResumeButton.ForeColor = Color.DarkRed;
       this.pauseResumeButton.Click +=
           new EventHandler(this.pauseResumeButton_Click);
 
@@ -433,11 +432,9 @@ namespace GoogleEmailUploader {
     void pauseResumeButton_Click(object sender, EventArgs e) {
       if (this.googleEmailUploaderModel.IsPaused) {
         this.pauseResumeButton.Text = Resources.PauseText;
-        this.pauseResumeButton.ForeColor = Color.DarkRed;
         this.googleEmailUploaderModel.ResumeUpload();
       } else {
         this.pauseResumeButton.Text = Resources.ResumeText;
-        this.pauseResumeButton.ForeColor = Color.DarkGreen;
         this.googleEmailUploaderModel.PauseUpload();
       }
     }
@@ -632,7 +629,6 @@ namespace GoogleEmailUploader {
                                   Color color) {
       if (this.IsHandleCreated && !this.IsDisposed) {
         this.pauseResumeButton.Text = text;
-        this.pauseResumeButton.ForeColor = color;
       }
     }
 

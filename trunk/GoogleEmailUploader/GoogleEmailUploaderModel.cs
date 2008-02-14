@@ -25,18 +25,27 @@ using System.Configuration;
 
 namespace GoogleEmailUploader {
   public class GoogleEmailUploaderConfig {
-    static int normalMailBatchSize = 2 * 1024 * 1024;
+    static int maximumMailsPerBatch = 40;
+    static int normalMailBatchSize = 512 * 1024;
     static int maximumMailBatchSize = 16 * 1024 * 1024;
-    static int minimumPauseTime = 30;  // 30 seconds
-    static int maximumPauseTime = 150;  // 150 seconds
+    static int minimumPauseTime = 90;  // 90 seconds
+    static int maximumPauseTime = 180;  // 180 seconds
     static int failedMailHeadLineCount = 32;
-    // TODO(param): After testing is full done need to set this
-    // to false by default.
+    static string emailMigrationUrl =
+        "https://apps-apis.google.com/a/feeds/migration/2.0/{0}/{1}/mail/batch";
     static bool traceEnabled = true;
 
     public static void InitializeConfiguration() {
       System.Console.WriteLine(System.Environment.OSVersion.Version);
       string value;
+      try {
+        value = ConfigurationSettings.AppSettings["MaximumMailsPerBatch"];
+        if (value != null) {
+          GoogleEmailUploaderConfig.maximumMailsPerBatch = int.Parse(value);
+        }
+      } catch {
+        // If there is error let the default value stay
+      }
       try {
         value = ConfigurationSettings.AppSettings["NormalMailBatchSize"];
         if (value != null) {
@@ -78,12 +87,26 @@ namespace GoogleEmailUploader {
         // If there is error let the default value stay
       }
       try {
+        value = ConfigurationSettings.AppSettings["EmailMigrationUrl"];
+        if (value != null) {
+          GoogleEmailUploaderConfig.emailMigrationUrl = value;
+        }
+      } catch {
+        // If there is error let the default value stay
+      }
+      try {
         value = ConfigurationSettings.AppSettings["TraceEnabled"];
         if (value != null) {
           GoogleEmailUploaderConfig.traceEnabled = bool.Parse(value);
         }
       } catch {
         // If there is error let the default value stay
+      }
+    }
+
+    internal static int MaximumMailsPerBatch {
+      get {
+        return GoogleEmailUploaderConfig.maximumMailsPerBatch;
       }
     }
 
@@ -114,6 +137,12 @@ namespace GoogleEmailUploader {
     internal static int FailedMailHeadLineCount {
       get {
         return GoogleEmailUploaderConfig.failedMailHeadLineCount;
+      }
+    }
+
+    internal static string EmailMigrationUrl {
+      get {
+        return GoogleEmailUploaderConfig.emailMigrationUrl;
       }
     }
 
