@@ -52,4 +52,5 @@
 *A:* If you stored emails in directories outside of the Thunderbird “Profiles” directory, the Email Uploader does not detect these files. You can add these directories by adding them as new Thunderbird mailboxes in the Select Mail customization screen.
 
 *Q:* Which versions of windows are supported?
+
 *A:* Windows XP and Vista.
