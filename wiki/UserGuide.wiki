@@ -1,7 +1,7 @@
 #labels Featured
 =Google Email Uploader User Guide=
 
-The Google Email Uploader is a desktop utility that uploads email from other desktop email programs (like Microsoft Outlook) into your Google Apps mailbox. The Email Uploader preserves information like sent dates and sender/recipient data, as well as folder structure or other organizational tagging devices used by the other email program.
+The Google Email Uploader is a desktop utility for Microsoft Windows that uploads email from other desktop email programs (like Microsoft Outlook) into your Google Apps mailbox. The Email Uploader preserves information like sent dates and sender/recipient data, as well as folder structure or other organizational tagging devices used by the other email program.
 
 If you want to import mail from another web-based mail application, or mail that's stored on mail server,  [http://mail.google.com/support/bin/answer.py?hl=en&answer=21288 Gmail's Mail Fetcher] tool may be a better option.
 
