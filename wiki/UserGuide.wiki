@@ -116,8 +116,8 @@ For additional help, check the Google Email Uploader user support group.
 
 _Problem: Upload finishes quickly without actually uploading mail_
 
-If this is not your first attempt to upload, the Email Uploader may assume you've already uploaded the given mail. To reset the tool, go to your Google Email Uploader data directory and clear out the UserData.xml file (for example: C:\Documents and Settings\bob\Local Settings\Application Data\Google\GoogleEmailUploader\1.0.0.0\UserData.xml).
+If this is not your first attempt to upload, the Email Uploader may assume you've already uploaded the given mail. To reset the tool, go to your Google Email Uploader data directory and clear out the UserData.xml file (for example: XP - `C:\Documents and Settings\bob\Local Settings\Application Data\Google\GoogleEmailUploader\1.0.0.0\UserData.xml`, Vista - `C:\Users\bob\AppData\Local\Google\GoogleEmailUploader\1.0.0.0\UserData.xml`).
 
 _Problem: The program crashes_
 
-Check the file GoogleEmailUploaderTrace.txt in the Google Email Uploader data directory (for example: C:\Documents and Settings\bob\Local Settings\Application Data\Google\GoogleEmailUploader\1.0.0.0\GoogleEmailUploaderTrace.txt). Check the user support group for similar issues and resolutions.
+Check the file GoogleEmailUploaderTrace.txt in the Google Email Uploader data directory (for example: WIndows XP - `C:\Documents and Settings\bob\Local Settings\Application Data\Google\GoogleEmailUploader\1.0.0.0\GoogleEmailUploaderTrace.txt`, Vista - `C:\Users\bob\AppData\Local\Google\GoogleEmailUploader\1.0.0.0\GoogleEmailUploaderTrace.txt` ). Check the user support group for similar issues and resolutions.
