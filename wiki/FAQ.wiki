@@ -33,7 +33,7 @@
 
 *Q:* _I added a mailbox by mistake. How do I remove it?_
 
-*A:* Assuming you haven't uploaded your mail yet, go to your Google Email Uploader data  directory open the UserData.xml file. Remove the entire <Store ...> element corresponding to the mailbox you want to remove. 
+*A:* Assuming you haven't uploaded your mail yet, go to your Google Email Uploader data  directory open the UserData.xml file. Remove the entire <LoadedStore ...> element corresponding to the mailbox you want to remove. 
 
 *Q:* _What happens if I start an upload but don’t finish it, or if new email is downloaded after I do an import?_
 
