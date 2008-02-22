@@ -54,3 +54,7 @@
 *Q:* Which versions of windows are supported?
 
 *A:* Windows XP and Vista.
+
+*Q:* Why are Japanese mails getting garbled?
+
+*A:* Currently we don't support control characters in the xml. Hence the encoding gets garbled. We are working on fixing this.
