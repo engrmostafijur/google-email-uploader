@@ -58,3 +58,7 @@
 *Q:* Why are Japanese mails getting garbled?
 
 *A:* Currently we don't support control characters in the xml. Hence the encoding gets garbled. We are working on fixing this.
+
+*Q:* Why do i get too many connection failures after uploading to some point?
+
+*A:* This _could_ be because of some email with large attachment. Moving it into a different folder is a good work around for now. We are investigating this.
