@@ -1,3 +1,4 @@
+#labels Featured
 ==Development==
 For development we use VS 2005. However one have to be sure not to be using any of the .NET 2.0 specifics so that GoogleEmailUploader works on targeted .NET 1.1.
 
