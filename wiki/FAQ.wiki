@@ -51,18 +51,18 @@
 
 *A:* If you stored emails in directories outside of the Thunderbird “Profiles” directory, the Email Uploader does not detect these files. You can add these directories by adding them as new Thunderbird mailboxes in the Select Mail customization screen.
 
-*Q:* Which versions of windows are supported?
+*Q:* _Which versions of windows are supported?_
 
 *A:* Windows XP and Vista.
 
-*Q:* Why are Japanese mails getting garbled?
+*Q:* _Why are Japanese mails getting garbled?_
 
 *A:* Currently we don't support control characters in the xml. Hence the encoding gets garbled. We are working on fixing this.
 
-*Q:* Why do i get too many connection failures after uploading to some point?
+*Q:* _Why do i get too many connection failures after uploading to some point?_
 
 *A:* This _could_ be because of some email with large attachment. Moving it into a different folder is a good work around for now. We are investigating this.
 
-*Q:* I get too many connection failures and upload does not proceed.
+*Q:* _I get too many connection failures and upload does not proceed. What can i do?_
 
 *A:* Take a look at the trace file at the location given in AppData (Exact location in User Guide). If the exception says "The underlying connection was closed: An unexpected error occurred on a receive.", it has been observed that its a .NET 1.1 issue. Uninstalling .NET 1.1 and having .NET 2.0 in place removes this issue.
