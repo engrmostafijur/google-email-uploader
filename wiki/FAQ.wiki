@@ -64,4 +64,5 @@
 *A:* This _could_ be because of some email with large attachment. Moving it into a different folder is a good work around for now. We are investigating this.
 
 *Q:* I get too many connection failures and upload does not proceed.
+
 *A:* Take a look at the trace file at the location given in AppData (Exact location in User Guide). If the exception says "The underlying connection was closed: An unexpected error occurred on a receive.", it has been observed that its a .NET 1.1 issue. Uninstalling .NET 1.1 and having .NET 2.0 in place removes this issue.
