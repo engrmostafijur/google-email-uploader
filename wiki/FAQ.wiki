@@ -1,6 +1,10 @@
 #labels Featured
 =FAQ=
 
+*Q:* _I get a "You are not authorized to use this feature" message.  What's up?_
+
+*A:* The Google Email Uploader is only enabled for users with Google Apps accounts, not standard GMail accounts.  Also, you must first activate your email account by logging into mail.google.com/a/<your domain> and accepting the Terms of Service for your user account. 
+
 *Q:* _The Email Uploader is still running from yesterday, but isn't making any progress. What will happen if I restart the tool now?_
 
 *A:* We recommend a restart if you're not seeing any progress. Restarting the tool will not cause duplicate email to be imported.
