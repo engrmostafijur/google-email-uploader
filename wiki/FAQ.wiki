@@ -15,7 +15,7 @@
 
 *Q:* _Why is the "Add another mailbox" link disabled on the Customize screen?_
 
-*A:* To add another mailbox, you first need to select which email program you want to add a mailbox for. This option is used to add archived mail. Once you select an email program, the link becomes active.
+*A:* This is changed in v1.1 - you may add another mailbox by clicking on the links on the right.  We suggest you upgrade to 1.1.
 
 *Q:* _How do I set up a proxy for the Email Uploader?_
 
@@ -45,7 +45,7 @@
 
 *Q:* _How will I be able to distinguish between imported email and the email I already had in Gmail?_
 
-*A:* All imported mail will have a label applied indicating which email client it originated from (for example "from Outlook Express").
+*A:* All imported mail will have a label applied indicating that it was "Imported".  Version 1.1 merges different mailboxes from different clients into a single GMail mailbox, but it preserves folders.  If you wish to preserve your email clients, you may first rename the folders in the email clients to differentiate each client.  E.g. "Outlook - Inbox".  Alternatively, you may upload mail from one client's mailbox, select all that email in GMail, apply a new label ("e.g. Old Outlook Inbox"), and then upload your next mailbox.
 
 *Q:* _Can I pick and choose which emails to import?_
 
