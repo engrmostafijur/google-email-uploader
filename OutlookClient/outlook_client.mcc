@@ -13,33 +13,61 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "./outlook_client.h"
+#include "./outlook_client.mh"
 
 #define PR_FLAG_FOLLOW_UP PROP_TAG(PT_LONG, 0x1090)
+#define PR_IPM_DRAFTS_ENTRYID PROP_TAG(PT_BINARY, 0x36D7)
+
 static const int kFollowUpFlagValue = 2;
 
-static SizedSPropTagArray(1, kProfileColsA) =
-    {1, {PR_DISPLAY_NAME_A}};
-static SizedSPropTagArray(1, kProfileColsW) =
-    {1, {PR_DISPLAY_NAME_W}};
+static GUID kPSETID_Address = {
+    0x00062004,
+    0x0000,
+    0x0000,
+    {0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46}};
+static LONG kContactHomeAddress = 0x0000801A;
+static LONG kContactBusinessAddress = 0x0000801B;
+static LONG kContactOtherAddress = 0x0000801C;
+static LONG kContactEmailAddress1 = 0x00008083;
+static LONG kContactEmailAddress2 = 0x00008093;
+static LONG kContactEmailAddress3 = 0x000080A3;
+
+static SizedSPropTagArray(2, kProfileColsA) =
+    {2, {PR_DISPLAY_NAME_A,
+         PR_DEFAULT_PROFILE}};
+static SizedSPropTagArray(2, kProfileColsW) =
+    {2, {PR_DISPLAY_NAME_W,
+         PR_DEFAULT_PROFILE}};
 static SizedSPropTagArray(3, kMsgStoreCols) =
     {3, {PR_ENTRYID,
          PR_DISPLAY_NAME,
          PR_PROVIDER_DISPLAY}};
-static SizedSPropTagArray(6, kContentTableCols) =
+static SizedSPropTagArray(6, kMailContentTableCols) =
     {6, {PR_ENTRYID,
          PR_MESSAGE_DELIVERY_TIME,
          PR_MESSAGE_SIZE,
          PR_MESSAGE_FLAGS,
          PR_FLAG_FOLLOW_UP,
          PR_MESSAGE_CLASS}};
-static SizedSSortOrderSet(1, kContentTableSortOrder) =
+static SizedSSortOrderSet(1, kMailContentTableSortOrder) =
     {1, 0, 0, {PR_MESSAGE_DELIVERY_TIME,
                TABLE_SORT_ASCEND}};
-static SizedSPropTagArray(3, kSubFolderCols) =
-    {3, {PR_ENTRYID,
+
+const int kEmail1Index = 27;
+const int kEmail2Index = 28;
+const int kEmail3Index = 29;
+const int kBusinessAddressIndex = 30;
+const int kHomeAddressIndex = 31;
+const int kOtherAddressIndex = 32;
+
+static SizedSSortOrderSet(1, kContactsContentTableSortOrder) =
+    {1, 0, 0, {PR_CREATION_TIME,
+               TABLE_SORT_ASCEND}};
+static SizedSPropTagArray(4, kSubFolderCols) =
+    {4, {PR_ENTRYID,
          PR_DISPLAY_NAME,
-         PR_CONTENT_COUNT}};
+         PR_CONTENT_COUNT,
+         PR_CONTAINER_CLASS_W}};
 static SizedSPropTagArray(1, kMessageServiceCols) =
     {1, {PR_SERVICE_UID}};
 static wchar_t kHexMap[16] = {
@@ -198,6 +226,68 @@ ArrayList *COutlookAPI::GetProfileNames() {
   return array_list;
 }
 
+String *COutlookAPI::GetDefaultProfileName() {
+  Debug::Assert(MAPI_library_ != NULL);
+  String *default_profile = NULL;
+  ComPtr<IMAPITable> profile_table;
+  // Attempts to obtain the access to the profile table, which contains
+  // information about all of the available profiles.
+  HRESULT hr = profile_admin_->GetProfileTable(unicode_profiles_option_,
+                                               &profile_table);
+  if (FAILED(hr))  {
+    return default_profile;
+  }
+  LPSRowSet profile_rows = NULL;
+  // Queries the table for the display name property of each profile within.
+  if (IsUnicodeProfiles) {
+    hr = HrQueryAllRows(profile_table,
+                        (LPSPropTagArray)&kProfileColsW,
+                        NULL,
+                        NULL,
+                        0,
+                        &profile_rows);
+    if (FAILED(hr)) {
+      return default_profile;
+    }
+  } else {
+    hr = HrQueryAllRows(profile_table,
+                        (LPSPropTagArray)&kProfileColsA,
+                        NULL,
+                        NULL,
+                        0,
+                        &profile_rows);
+    if (FAILED(hr)) {
+      return default_profile;
+    }
+  }
+  // For all the profiles found in the table, adds their display name to the
+  // vector of profile names.
+  for (unsigned int i = 0; i < profile_rows->cRows; ++i) {
+    String *profile_name;
+    if (IsUnicodeProfiles) {
+      profile_name = new String(profile_rows->aRow[i].lpProps[0].Value.lpszW);
+    } else {
+      profile_name = new String(profile_rows->aRow[i].lpProps[0].Value.lpszA);
+    }
+    if (profile_name->StartsWith(kTempProfilePrefix)) {
+      // Ignore and delete all the temp profiles that we have created.
+      HGlobalPtr<wchar_t> profile_name_native(
+        GetProperNativeProfileName(profile_name));
+      profile_admin_->DeleteProfile(profile_name_native,
+                                    unicode_profiles_option_);
+      continue;
+    }
+    if (profile_rows->aRow[i].lpProps[1].ulPropTag != PR_DEFAULT_PROFILE
+        || !profile_rows->aRow[i].lpProps[1].Value.b) {
+      continue;
+    }
+    default_profile = profile_name;
+    break;
+  }
+  FreeProws(profile_rows);
+  return default_profile;
+}
+
 LPMAPISESSION COutlookAPI::OpenSession(String *profile_name) {
   Debug::Assert(MAPI_library_ != NULL);
   LPMAPISESSION session = NULL;
@@ -244,33 +334,64 @@ IMAPIFolder *COutlookAPI::GetRootFolder(IMsgStore *msg_store) {
   return root_folder;
 }
 
-bool COutlookAPI::IsMailFolder(String *folder_name) {
-  Debug::Assert(MAPI_library_ != NULL);
-  return String::Compare(folder_name, kCalendar) != 0
-      && String::Compare(folder_name, kContacts) != 0
-      && String::Compare(folder_name, kJournal) != 0
-      && String::Compare(folder_name, kNotes) != 0
-      && String::Compare(folder_name, kJunkEmail) != 0
-      && String::Compare(folder_name, kOutbox) != 0
-      && String::Compare(folder_name, kTasks) != 0;
-}
+bool COutlookAPI::FillContactsContentTableCols(IMsgStore *msg_store,
+                                               SPropTagArray *prop_tag_array) {
+  MAPINAMEID email_address1_name_id = 
+    { &kPSETID_Address, MNID_ID, kContactEmailAddress1 };
+  MAPINAMEID email_address2_name_id = 
+    { &kPSETID_Address, MNID_ID, kContactEmailAddress2 };
+  MAPINAMEID email_address3_name_id = 
+    { &kPSETID_Address, MNID_ID, kContactEmailAddress3 };
+  MAPINAMEID business_address_name_id = 
+    { &kPSETID_Address, MNID_ID, kContactBusinessAddress };
+  MAPINAMEID home_address_name_id = 
+    { &kPSETID_Address, MNID_ID, kContactHomeAddress };
+  MAPINAMEID other_address_name_id = 
+    { &kPSETID_Address, MNID_ID, kContactOtherAddress };
 
-FolderKind COutlookAPI::GetFolderKind(String *folder_name) {
-  Debug::Assert(MAPI_library_ != NULL);
-  if (String::Compare(folder_name, kInbox) == 0) {
-    return FolderKind::Inbox;
-  } else if (String::Compare(folder_name, kSentItems) == 0) {
-    return FolderKind::Sent;
-  } else if (String::Compare(folder_name, kDrafts) == 0) {
-    return FolderKind::Draft;
-  } else if (String::Compare(folder_name, kDeletedItems) == 0) {
-    return FolderKind::Trash;
-  } else {
-    return FolderKind::Other;
+  MAPINAMEID *mapi_name_id_array[] = {
+    &email_address1_name_id,
+    &email_address2_name_id,
+    &email_address3_name_id,
+    &business_address_name_id,
+    &home_address_name_id,
+    &other_address_name_id,
+  };
+  ULONG count = sizeof(mapi_name_id_array)/sizeof(MAPINAMEID*);
+  LPSPropTagArray prop_tags;
+  HRESULT hresult = msg_store->GetIDsFromNames(
+      count,
+      mapi_name_id_array,
+      MAPI_CREATE,
+      &prop_tags);
+
+  if (FAILED(hresult)) {
+    return false;
   }
+
+  if (prop_tags->cValues != count) {
+    MAPI_free_buffer_(prop_tags);
+    return false;
+  }
+
+  prop_tag_array->aulPropTag[kEmail1Index] =
+      prop_tags->aulPropTag[0] | PT_UNICODE;
+  prop_tag_array->aulPropTag[kEmail2Index] =
+      prop_tags->aulPropTag[1] | PT_UNICODE;
+  prop_tag_array->aulPropTag[kEmail3Index] =
+      prop_tags->aulPropTag[2] | PT_UNICODE;
+  prop_tag_array->aulPropTag[kBusinessAddressIndex] =
+      prop_tags->aulPropTag[3] | PT_UNICODE;
+  prop_tag_array->aulPropTag[kHomeAddressIndex] =
+      prop_tags->aulPropTag[4] | PT_UNICODE;
+  prop_tag_array->aulPropTag[kOtherAddressIndex] =
+      prop_tags->aulPropTag[5] | PT_UNICODE;
+
+  MAPI_free_buffer_(prop_tags);
+  return true;
 }
 
-IMAPITable *COutlookAPI::CreateMAPIContentTable(IMAPIFolder *MAPI_folder) {
+IMAPITable *COutlookAPI::CreateMAPIMailContentTable(IMAPIFolder *MAPI_folder) {
   Debug::Assert(MAPI_library_ != NULL);
   IMAPITable *MAPI_content_table;
   HRESULT hr = MAPI_folder->GetContentsTable(MAPI_DEFERRED_ERRORS,
@@ -278,19 +399,48 @@ IMAPITable *COutlookAPI::CreateMAPIContentTable(IMAPIFolder *MAPI_folder) {
   if (FAILED(hr)) {
     return NULL;
   }
-  hr = MAPI_content_table->SetColumns((LPSPropTagArray)&kContentTableCols,
+  hr = MAPI_content_table->SetColumns((LPSPropTagArray)&kMailContentTableCols,
                                       0);
   if (FAILED(hr)) {
     return NULL;
   }
   // Sorts the table according to Message Delivery Time, in ascending order.
-  hr = MAPI_content_table->SortTable((LPSSortOrderSet)&kContentTableSortOrder,
-                                     0);
+  hr = MAPI_content_table->SortTable(
+      (LPSSortOrderSet)&kMailContentTableSortOrder,
+      0);
   if (FAILED(hr)) {
     return NULL;
   }
   return MAPI_content_table;
 }
+
+
+IMAPITable *COutlookAPI::CreateMAPIContactsContentTable(
+    IMAPIFolder *MAPI_folder,
+    SPropTagArray *prop_tag_array) {
+  Debug::Assert(MAPI_library_ != NULL);
+  IMAPITable *MAPI_content_table;
+  HRESULT hr = MAPI_folder->GetContentsTable(MAPI_DEFERRED_ERRORS,
+                                             &MAPI_content_table);
+  if (FAILED(hr)) {
+    return NULL;
+  }
+  hr = MAPI_content_table->SetColumns(
+      prop_tag_array,
+      0);
+  if (FAILED(hr)) {
+    return NULL;
+  }
+  // Sorts the table according to contact creation time, in ascending order.
+  hr = MAPI_content_table->SortTable(
+      (LPSSortOrderSet)&kContactsContentTableSortOrder,
+      0);
+  if (FAILED(hr)) {
+    return NULL;
+  }
+  return MAPI_content_table;
+}
+
 
 IStream *COutlookAPI::CreateStream() {
   Debug::Assert(MAPI_library_ != NULL);
@@ -380,6 +530,36 @@ String* COutlookAPI::OpenTempPSTProfile(String *pst_file_path) {
 
   return profile_name;
 }
+
+String *COutlookAPI::EntryIdToString(SBinary entryId) {
+  if (kHexMap == NULL) {
+    kHexMap = new String* __gc [16];
+    kHexMap[0] = new String("0");
+    kHexMap[1] = new String("1");
+    kHexMap[2] = new String("2");
+    kHexMap[3] = new String("3");
+    kHexMap[4] = new String("4");
+    kHexMap[5] = new String("5");
+    kHexMap[6] = new String("6");
+    kHexMap[7] = new String("7");
+    kHexMap[8] = new String("8");
+    kHexMap[9] = new String("9");
+    kHexMap[10] = new String("A");
+    kHexMap[11] = new String("B");
+    kHexMap[12] = new String("C");
+    kHexMap[13] = new String("D");
+    kHexMap[14] = new String("E");
+    kHexMap[15] = new String("F");
+  }
+  StringBuilder *persist_name_builder = new StringBuilder();
+  for (unsigned long i = 0; i < entryId.cb; ++i) {
+    unsigned char byte = entryId.lpb[i];
+    persist_name_builder->Append(kHexMap[byte >> 4]);
+    persist_name_builder->Append(kHexMap[byte & 0x0F]);
+  }
+  return persist_name_builder->ToString();
+}
+
 
 HINSTANCE COutlookAPI::FindOutlookDllAndInitFunctionPointers() {
   // We lookup for outlook's installed API dll directly.
@@ -473,20 +653,20 @@ OutlookClient::OutlookClient() {
   outlook_API_ = new COutlookAPI();
   profiles_ = new ArrayList();
   stores_ = new ArrayList();
+  contacts_ = new ArrayList();
   loaded_store_file_names_ = new ArrayList();
   if (!outlook_API_->OutlookAvailable) {
     return;
   }
-  ArrayList *profile_name_list = outlook_API_->GetProfileNames();
-  for (int i = 0; i < profile_name_list->Count; ++i) {
-    // Ignore lint warning for the following dynamic cast.
-    String *profile_name = dynamic_cast<String*>(profile_name_list->Item[i]);
-    OutlookProfile *outlook_profile = new OutlookProfile(this,
-                                                         profile_name);
-    // Store the profile object and store all its stores.
-    profiles_->Add(outlook_profile);
-    stores_->AddRange(outlook_profile->Stores);
+  String *profile_name = outlook_API_->GetDefaultProfileName();
+  if (profile_name == NULL) {
+    return;
   }
+  OutlookProfile *outlook_profile = new OutlookProfile(this,
+                                                       profile_name);
+  // Store the profile object and store all its stores.
+  profiles_->Add(outlook_profile);
+  stores_->AddRange(outlook_profile->Stores);
 }
 
 IStore* OutlookClient::OpenStore(String *filename) {
@@ -580,18 +760,13 @@ ArrayList *OutlookProfile::get_Stores() {
     }
     // defaultEntryId is persistent identifier for the store in the datebase.
     // We use it as persistent name for the store.
-    StringBuilder *persist_name_builder = new StringBuilder();
-    for (unsigned long i = 0; i < defaultEntryId.cb; ++i) {
-      unsigned char byte = defaultEntryId.lpb[i];
-      persist_name_builder->Append(kHexMap[byte >> 4]);
-      persist_name_builder->Append(kHexMap[byte & 0x0F]);
-    }
+    String *persist_name = COutlookAPI::EntryIdToString(defaultEntryId);
     String *store_display_name = new String(
         msgStoreRows->aRow[k].lpProps[1].Value.lpszW);
     // For now we use the display name as persist name.
     OutlookStore *outlook_store = new OutlookStore(
         this,
-        persist_name_builder->ToString(),
+        persist_name,
         store_display_name,
         msg_store);
     stores_->Add(outlook_store);
@@ -627,6 +802,59 @@ OutlookStore::OutlookStore(OutlookProfile *outlook_profile,
   MAPI_store_ = MAPI_store;
   MAPI_root_folder_ =
       outlook_profile->Client->OutlookAPI->GetRootFolder(MAPI_store_);
+  SBinary inbox_entry_id;
+  WCHAR *class_name;
+  HRESULT hr = MAPI_store_->GetReceiveFolder(L"IPM.Note",
+                                             MAPI_UNICODE,
+                                             &inbox_entry_id.cb,
+                                             (LPENTRYID*)&inbox_entry_id.lpb,
+                                             &class_name);
+  if (FAILED(hr)) {
+    inbox_entry_id_.cb = 0;
+    inbox_entry_id_.lpb = NULL;
+  } else {
+    inbox_entry_id_.cb = inbox_entry_id.cb;
+    inbox_entry_id_.lpb = inbox_entry_id.lpb;
+    outlook_profile->Client->OutlookAPI->MAPIFree(class_name);
+  }
+  SPropValue *sent_items_entry_id;
+  hr = HrGetOneProp(MAPI_store_,
+                    PR_IPM_SENTMAIL_ENTRYID,
+                    &sent_items_entry_id);
+  if (FAILED(hr)) {
+    sent_items_entry_id_ = NULL;
+  } else {
+    sent_items_entry_id_ = sent_items_entry_id;
+  }
+  SPropValue *deleted_items_entry_id;
+  hr = HrGetOneProp(MAPI_store_,
+                    PR_IPM_WASTEBASKET_ENTRYID,
+                    &deleted_items_entry_id);
+  if (FAILED(hr)) {
+    deleted_items_entry_id_ = NULL;
+  } else {
+    deleted_items_entry_id_ = deleted_items_entry_id;
+  }
+  ULONG objtype;
+  ComPtr<IMAPIFolder> uber_root_folder;
+  hr = MAPI_store_->OpenEntry(0,
+                              NULL,
+                              NULL,
+                              MAPI_DEFERRED_ERRORS,
+                              &objtype,
+                              reinterpret_cast<IUnknown**>(&uber_root_folder));
+  drafts_entry_id_ = NULL;
+  if (SUCCEEDED(hr)) {
+    SPropValue *drafts_entry_id;
+    hr = HrGetOneProp(uber_root_folder,
+                      PR_IPM_DRAFTS_ENTRYID,
+                      &drafts_entry_id);
+    if (SUCCEEDED(hr)) {
+      drafts_entry_id_ = drafts_entry_id;
+    }
+  }
+
+  contacts_ = GetContacts();
 }
 
 IEnumerable *OutlookStore::get_Folders() {
@@ -638,9 +866,84 @@ IEnumerable *OutlookStore::get_Folders() {
     folders_ = new ArrayList();
     return folders_;
   }
-  folders_ = GetSubFolders(MAPI_root_folder_,
-                           NULL);
+  folders_ = GetMailSubFolders(MAPI_root_folder_,
+                               NULL);
   return folders_;
+}
+
+bool OutlookStore::IsMailFolder(SPropValue container_class) {
+  Debug::Assert(outlook_profile_ != NULL);
+  if (PROP_TYPE(container_class.ulPropTag) == PT_ERROR) {
+    return true;
+  }
+  String *folder_ipf = new String(container_class.Value.lpszW);
+  if (folder_ipf->Length == 0) {
+    return true;
+  }
+  return String::Compare(folder_ipf, COutlookAPI::kNoteIPF) == 0;
+}
+
+bool OutlookStore::IsContactsFolder(SPropValue container_class) {
+  Debug::Assert(outlook_profile_ != NULL);
+  if (PROP_TYPE(container_class.ulPropTag) == PT_ERROR) {
+    return false;
+  }
+  String *folder_ipf = new String(container_class.Value.lpszW);
+  return String::Compare(folder_ipf, COutlookAPI::kContactsIPF) == 0;
+}
+
+FolderKind OutlookStore::GetFolderKind(SBinary folder_entry_id) {
+  Debug::Assert(outlook_profile_ != NULL);
+  ULONG result;
+  HRESULT hr;
+  if (inbox_entry_id_.lpb != NULL) {
+    hr = MAPI_store_->CompareEntryIDs(folder_entry_id.cb,
+                                      (LPENTRYID)folder_entry_id.lpb,
+                                      inbox_entry_id_.cb,
+                                      (LPENTRYID)inbox_entry_id_.lpb,
+                                      0,
+                                      &result);
+    if (SUCCEEDED(hr) && result == TRUE) {
+      return FolderKind::Inbox;
+    }
+  }
+  if (sent_items_entry_id_ != NULL) {
+    hr = MAPI_store_->CompareEntryIDs(
+        folder_entry_id.cb,
+        (LPENTRYID)folder_entry_id.lpb,
+        sent_items_entry_id_->Value.bin.cb,
+        (LPENTRYID)sent_items_entry_id_->Value.bin.lpb,
+        0,
+        &result);
+    if (SUCCEEDED(hr) && result == TRUE) {
+      return FolderKind::Sent;
+    }
+  }
+  if (drafts_entry_id_ != NULL) {
+    hr = MAPI_store_->CompareEntryIDs(
+        folder_entry_id.cb,
+        (LPENTRYID)folder_entry_id.lpb,
+        drafts_entry_id_->Value.bin.cb,
+        (LPENTRYID)drafts_entry_id_->Value.bin.lpb,
+        0,
+        &result);
+    if (SUCCEEDED(hr) && result == TRUE) {
+      return FolderKind::Draft;
+    }
+  }
+  if (deleted_items_entry_id_ != NULL) {
+    hr = MAPI_store_->CompareEntryIDs(
+        folder_entry_id.cb,
+        (LPENTRYID)folder_entry_id.lpb,
+        deleted_items_entry_id_->Value.bin.cb,
+        (LPENTRYID)deleted_items_entry_id_->Value.bin.lpb,
+        0,
+        &result);
+    if (SUCCEEDED(hr) && result == TRUE) {
+      return FolderKind::Trash;
+    }
+  }
+  return FolderKind::Other;
 }
 
 void OutlookStore::Dispose() {
@@ -660,8 +963,8 @@ void OutlookStore::Dispose() {
   outlook_profile_ = NULL;
 }
 
-ArrayList *OutlookStore::GetSubFolders(IMAPIFolder *MAPI_parent_folder,
-                                       OutlookFolder *parent_folder) {
+ArrayList *OutlookStore::GetMailSubFolders(IMAPIFolder *MAPI_parent_folder,
+                                           OutlookFolder *parent_folder) {
   Debug::Assert(outlook_profile_ != NULL);
   ArrayList *sub_folders = new ArrayList();
   ComPtr<IMAPITable> hierarchy;
@@ -706,14 +1009,15 @@ ArrayList *OutlookStore::GetSubFolders(IMAPIFolder *MAPI_parent_folder,
     if (child_type != MAPI_FOLDER) {
       continue;
     }
-    String *folder_name = new String(rows->aRow[i].lpProps[1].Value.lpszW);
-    if (!outlook_profile_->Client->OutlookAPI->IsMailFolder(folder_name)) {
+    if (!this->IsMailFolder(rows->aRow[i].lpProps[3])) {
       continue;
     }
+    String *folder_name = new String(rows->aRow[i].lpProps[1].Value.lpszW);
     OutlookFolder *child_folder = new OutlookFolder(
         this,
         parent_folder,
         folder_name,
+        this->GetFolderKind(rows->aRow[i].lpProps[0].Value.bin),
         MAPI_child_folder.Detach(),
         rows->aRow[i].lpProps[2].Value.l);
     sub_folders->Add(child_folder);
@@ -722,17 +1026,332 @@ ArrayList *OutlookStore::GetSubFolders(IMAPIFolder *MAPI_parent_folder,
   return sub_folders;
 }
 
+void OutlookStore::AddContactsUnder(IMAPIFolder *MAPI_folder,
+                                    SPropTagArray *prop_tag_array,
+                                    ArrayList *contacts_list) {
+  ComPtr<IMAPITable> hierarchy;
+  HRESULT hr = MAPI_folder->OpenProperty(
+      PR_CONTAINER_HIERARCHY,
+      &IID_IMAPITable,
+      NULL,
+      0,
+      reinterpret_cast<IUnknown**>(&hierarchy));
+  if (FAILED(hr)) {
+    return;
+  }
+
+  LPSRowSet rows;
+  // Obtains all subdirectories of this folder.
+  hr = HrQueryAllRows(hierarchy,
+                      (LPSPropTagArray)&kSubFolderCols,
+                      NULL,
+                      NULL,
+                      0,
+                      &rows);
+  if (FAILED(hr)) {
+    return;
+  }
+  // For each subdirectory, obtains a pointer to it, and adds the
+  // pointer to the sub_folders array list if the directory is valid
+  // for traversal.
+  for (unsigned int i = 0; i < rows->cRows; ++i) {
+    ComPtr<IMAPIFolder> MAPI_child_folder;
+    ULONG child_type;
+    hr = MAPI_folder->OpenEntry(
+        rows->aRow[i].lpProps[0].Value.bin.cb,
+        (LPENTRYID) rows->aRow[i].lpProps[0].Value.bin.lpb,
+        NULL,
+        0,
+        &child_type,
+        reinterpret_cast<IUnknown**>(&MAPI_child_folder));
+    if (FAILED(hr)) {
+      // Continue with other folders in case of failure...
+      continue;
+    }
+    if (child_type != MAPI_FOLDER) {
+      continue;
+    }
+
+    // Recurse and add contacts under this child.
+    AddContactsUnder(MAPI_child_folder,
+                     prop_tag_array,
+                     contacts_list);
+
+    if (!this->IsContactsFolder(rows->aRow[i].lpProps[3])) {
+      continue;
+    }
+    // Open the content table
+    ComPtr<IMAPITable> MAPI_content_table(
+        outlook_profile_->Client->OutlookAPI->CreateMAPIContactsContentTable(
+            MAPI_child_folder,
+            prop_tag_array));
+    if (MAPI_content_table == NULL) {
+      break;
+    }
+    for (;;) {
+      ULONG row_id, num, den;
+      // We query the current position of the cursor.
+      hr = MAPI_content_table->QueryPosition(&row_id,
+                                             &num,
+                                             &den);
+      if (FAILED(hr)) {
+        break;
+      }
+      // We read 1 row from the content table.
+      LPSRowSet contact_rows = NULL;
+      hr = MAPI_content_table->QueryRows(1,
+                                         0,
+                                         &contact_rows);
+      if (FAILED(hr) || contact_rows == NULL || contact_rows->cRows == 0) {
+        // In case of failure or we could not read a row we indicate end of
+        // iteration
+        break;
+      }
+      OutlookContact *outlook_contact = CreateContact(contact_rows->aRow);
+      FreeProws(contact_rows);
+      if (outlook_contact == NULL) {
+        continue;
+      }
+      contacts_list->Add(outlook_contact);
+    }
+  }
+  FreeProws(rows);
+}
+
+ArrayList *OutlookStore::GetContacts() {
+  Debug::Assert(outlook_profile_ != NULL);
+  ArrayList *contacts = new ArrayList();
+  SizedSPropTagArray(33, contacts_content_table_cols) =
+      {33,  {PR_ENTRYID,
+             PR_CREATION_TIME,
+             PR_MESSAGE_CLASS,
+             PR_DISPLAY_NAME_W, // Title
+             PR_BODY_W, // 4 Notes
+             PR_ASSISTANT_TELEPHONE_NUMBER_W, // 5
+             PR_BUSINESS_FAX_NUMBER_W, // 6
+             PR_BUSINESS_TELEPHONE_NUMBER_W, // 7
+             PR_BUSINESS2_TELEPHONE_NUMBER_W, // 8
+             PR_CALLBACK_TELEPHONE_NUMBER_W, // 9
+             PR_CAR_TELEPHONE_NUMBER_W, // 10
+             PR_COMPANY_MAIN_PHONE_NUMBER_W, // 11
+             PR_HOME_FAX_NUMBER_W, // 12
+             PR_HOME_TELEPHONE_NUMBER_W, // 13
+             PR_HOME2_TELEPHONE_NUMBER_W, // 14
+             PR_ISDN_NUMBER_W, // 15
+             PR_MOBILE_TELEPHONE_NUMBER_W, // 16
+             PR_OTHER_TELEPHONE_NUMBER_W, // 17
+             PR_PAGER_TELEPHONE_NUMBER_W, // 18
+             PR_PRIMARY_FAX_NUMBER_W, // 19
+             PR_PRIMARY_TELEPHONE_NUMBER_W, // 20
+             PR_RADIO_TELEPHONE_NUMBER_W, // 21
+             PR_TELEX_NUMBER_W, // 22
+             PR_TTYTDD_PHONE_NUMBER_W, // 23
+             PR_COMPANY_NAME_W, // 24
+             PR_TITLE_W, // 25
+             PR_BUSINESS_HOME_PAGE_W, // 26
+             0xFFFFFFFF, // 27 email1 (primary)
+             0xFFFFFFFF, // 28 email2 (other)
+             0xFFFFFFFF, // 29 email3 (other)
+             0xFFFFFFFF, // 30 business address
+             0xFFFFFFFF, // 31 home address
+             0xFFFFFFFF, // 32 Other address
+      }};
+  SPropTagArray* prop_tag_array = (SPropTagArray*)&contacts_content_table_cols;
+  // Change the kContactsContentTableCols's email and address columns using
+  // named properties by calling FillContactsContentTableCols
+  if (outlook_profile_->Client->
+      OutlookAPI->FillContactsContentTableCols(MAPI_store_,
+          prop_tag_array)) {
+    AddContactsUnder(MAPI_root_folder_, prop_tag_array, contacts);
+  }
+
+  return contacts;
+}
+
+#define READ_AND_ASSIGN_STR_PROP(_var_name, _index) \
+    String *_var_name = NULL; \
+    if (PROP_TYPE(contact_row->lpProps[_index].ulPropTag) != PT_ERROR) { \
+      _var_name = new String(contact_row->lpProps[_index].Value.lpszW); \
+    } _var_name
+
+#define CHECK_AND_ADD_EMAILADDR(_emailaddr_var, _label, _rel, _prim) \
+  if (_emailaddr_var != NULL && _emailaddr_var->Length != 0) { \
+    EmailContact *email = new EmailContact(_emailaddr_var, \
+                                           _label, \
+                                           _rel, \
+                                           _prim); \
+    email_list->Add(email); \
+  }
+
+#define CHECK_AND_ADD_PHONENUM(_phonenum_var, _label, _rel) \
+  if (_phonenum_var != NULL && _phonenum_var->Length != 0) { \
+    PhoneContact *phone = new PhoneContact(_phonenum_var, \
+                                           _label, \
+                                           _rel); \
+    phone_list->Add(phone); \
+  }
+
+#define CHECK_AND_ADD_POSTADDR(_postaddr_var, _label, _rel) \
+  if (_postaddr_var != NULL && _postaddr_var->Length != 0) { \
+    PostalContact *postal = new PostalContact(_postaddr_var, \
+                                              _label, \
+                                              _rel); \
+    postal_list->Add(postal); \
+  }
+
+OutlookContact* OutlookStore::CreateContact(LPSRow contact_row) {
+  String *message_class_name =
+      new String(contact_row->lpProps[2].Value.lpszW);
+  if (!message_class_name->Equals("IPM.Contact")){
+    return NULL;
+  }
+  String *contact_id = COutlookAPI::EntryIdToString(
+      contact_row->lpProps[0].Value.bin);
+  if (PROP_TYPE(contact_row->lpProps[3].ulPropTag) == PT_ERROR) {
+    return NULL;
+  }
+  String *display_name = new String(contact_row->lpProps[3].Value.lpszW);
+  READ_AND_ASSIGN_STR_PROP(notes, 4);
+  READ_AND_ASSIGN_STR_PROP(assistant_phone_number, 5);
+  READ_AND_ASSIGN_STR_PROP(business_fax_number, 6);
+  READ_AND_ASSIGN_STR_PROP(business_phone_number, 7);
+  READ_AND_ASSIGN_STR_PROP(business2_phone_number, 8);
+  READ_AND_ASSIGN_STR_PROP(callback_phone_number, 9);
+  READ_AND_ASSIGN_STR_PROP(car_phone_number, 10);
+  READ_AND_ASSIGN_STR_PROP(company_phone_number, 11);
+  READ_AND_ASSIGN_STR_PROP(home_fax_number, 12);
+  READ_AND_ASSIGN_STR_PROP(home_phone_number, 13);
+  READ_AND_ASSIGN_STR_PROP(home2_phone_number, 14);
+  READ_AND_ASSIGN_STR_PROP(isdn_number, 15);
+  READ_AND_ASSIGN_STR_PROP(mobile_phone_number, 16);
+  READ_AND_ASSIGN_STR_PROP(other_phone_number, 17);
+  READ_AND_ASSIGN_STR_PROP(pager_phone_number, 18);
+  READ_AND_ASSIGN_STR_PROP(primary_fax_number, 19);
+  READ_AND_ASSIGN_STR_PROP(primary_phone_number, 20);
+  READ_AND_ASSIGN_STR_PROP(radio_phone_number, 21);
+  READ_AND_ASSIGN_STR_PROP(telex_phone_number, 22);
+  READ_AND_ASSIGN_STR_PROP(ttytdd_phone_number, 23);
+  READ_AND_ASSIGN_STR_PROP(company_name, 24);
+  READ_AND_ASSIGN_STR_PROP(title, 25);
+  READ_AND_ASSIGN_STR_PROP(business_home_page, 26);
+  READ_AND_ASSIGN_STR_PROP(email1, kEmail1Index);
+  READ_AND_ASSIGN_STR_PROP(email2, kEmail2Index);
+  READ_AND_ASSIGN_STR_PROP(email3, kEmail3Index);
+  READ_AND_ASSIGN_STR_PROP(business_address, kBusinessAddressIndex);
+  READ_AND_ASSIGN_STR_PROP(home_address, kHomeAddressIndex);
+  READ_AND_ASSIGN_STR_PROP(other_address, kOtherAddressIndex);
+
+  if (display_name == NULL || display_name->Length == 0) {
+    // if display name is empty then we use the company name as title.
+    display_name = company_name;
+  }
+
+  ArrayList *email_list = new ArrayList();
+  if (email1 != NULL && email1->Length != 0) {
+    CHECK_AND_ADD_EMAILADDR(email1, NULL, ContactRelation::Other, true);
+    CHECK_AND_ADD_EMAILADDR(email2, NULL, ContactRelation::Other, false);
+    CHECK_AND_ADD_EMAILADDR(email3, NULL, ContactRelation::Other, false);
+  } else if(email2 != NULL && email2->Length != 0) {
+    CHECK_AND_ADD_EMAILADDR(email2, NULL, ContactRelation::Other, true);
+    CHECK_AND_ADD_EMAILADDR(email3, NULL, ContactRelation::Other, false);
+  } else {
+    CHECK_AND_ADD_EMAILADDR(email3, NULL, ContactRelation::Other, true);
+  }
+
+  ArrayList *im_list = new ArrayList();
+
+  ArrayList *phone_list = new ArrayList();
+  CHECK_AND_ADD_PHONENUM(assistant_phone_number,
+      COutlookAPI::kAssistantPhoneLabel,
+      ContactRelation::Label);
+  CHECK_AND_ADD_PHONENUM(business_fax_number,
+      NULL,
+      ContactRelation::WorkFax);
+  CHECK_AND_ADD_PHONENUM(business_phone_number,
+      NULL,
+      ContactRelation::Work);
+  CHECK_AND_ADD_PHONENUM(business2_phone_number,
+      COutlookAPI::kBusiness2PhoneLabel,
+      ContactRelation::Label);
+  CHECK_AND_ADD_PHONENUM(callback_phone_number,
+      COutlookAPI::kCallbackPhoneLabel,
+      ContactRelation::Label);
+  CHECK_AND_ADD_PHONENUM(car_phone_number,
+      COutlookAPI::kCarPhoneLabel,
+      ContactRelation::Label);
+  CHECK_AND_ADD_PHONENUM(company_phone_number,
+      COutlookAPI::kCompanyPhoneLabel,
+      ContactRelation::Label);
+  CHECK_AND_ADD_PHONENUM(home_fax_number,
+      NULL,
+      ContactRelation::HomeFax);
+  CHECK_AND_ADD_PHONENUM(home_phone_number,
+      NULL,
+      ContactRelation::Home);
+  CHECK_AND_ADD_PHONENUM(home2_phone_number,
+      COutlookAPI::kHome2PhoneLabel,
+      ContactRelation::Label);
+  CHECK_AND_ADD_PHONENUM(isdn_number,
+      COutlookAPI::kISDNLabel,
+      ContactRelation::Label);
+  CHECK_AND_ADD_PHONENUM(mobile_phone_number,
+      NULL,
+      ContactRelation::Mobile);
+  CHECK_AND_ADD_PHONENUM(other_phone_number,
+      NULL,
+      ContactRelation::Other);
+  CHECK_AND_ADD_PHONENUM(pager_phone_number,
+      NULL,
+      ContactRelation::Pager);
+  CHECK_AND_ADD_PHONENUM(primary_fax_number,
+      COutlookAPI::kPrimaryFaxLabel,
+      ContactRelation::Label);
+  CHECK_AND_ADD_PHONENUM(primary_phone_number,
+      COutlookAPI::kPrimaryPhoneLabel,
+      ContactRelation::Label);
+  CHECK_AND_ADD_PHONENUM(radio_phone_number,
+      COutlookAPI::kRadioPhoneLabel,
+      ContactRelation::Label);
+  CHECK_AND_ADD_PHONENUM(telex_phone_number,
+      COutlookAPI::kTelexPhoneLabel,
+      ContactRelation::Label);
+  CHECK_AND_ADD_PHONENUM(ttytdd_phone_number,
+      COutlookAPI::kTtytddPhoneLabel,
+      ContactRelation::Label);
+
+  ArrayList *postal_list = new ArrayList();
+  CHECK_AND_ADD_POSTADDR(business_address, NULL, ContactRelation::Work);
+  CHECK_AND_ADD_POSTADDR(home_address, NULL, ContactRelation::Home);
+  CHECK_AND_ADD_POSTADDR(other_address, NULL, ContactRelation::Other);
+
+  return new OutlookContact(contact_id,
+                            display_name,
+                            company_name,
+                            title,
+                            business_home_page,
+                            notes,
+                            email_list,
+                            im_list,
+                            phone_list,
+                            postal_list);
+}
+
+#undef CHECK_AND_ADD_POSTADDR
+#undef CHECK_AND_ADD_PHONENUM
+#undef CHECK_AND_ADD_EMAIL
+#undef READ_AND_ASSIGN_STR_PROP
+
 OutlookFolder::OutlookFolder(OutlookStore *outlook_store,
                              OutlookFolder *parent_folder,
                              String *name,
+                             FolderKind folder_kind,
                              IMAPIFolder *MAPI_folder,
                              unsigned int message_count) {
   outlook_store_ = outlook_store;
   parent_folder_ = parent_folder; 
   name_ = name;
   MAPI_folder_ = MAPI_folder;
-  folder_kind_ =
-    outlook_store->Profile->Client->OutlookAPI->GetFolderKind(name);
+  folder_kind_ = folder_kind;
   message_count_ = message_count;
 }
 
@@ -741,8 +1360,8 @@ IEnumerable *OutlookFolder::get_SubFolders() {
   if (subfolders_ != NULL) {
     return subfolders_;
   }
-  subfolders_ = outlook_store_->GetSubFolders(MAPI_folder_,
-                                              this);
+  subfolders_ = outlook_store_->GetMailSubFolders(MAPI_folder_,
+                                                  this);
   return subfolders_;
 }
 
@@ -767,14 +1386,14 @@ void OutlookFolder::Dispose() {
 
 OutlookEMailMessage::OutlookEMailMessage(
     OutlookFolder *outlook_folder,
-    unsigned int message_row_id,
+    String *message_id,
     unsigned int message_size,
     bool is_read,
     bool is_flagged,
     bool is_mail,
     unsigned char message_entry_id __gc[]) {
   outlook_folder_ = outlook_folder;
-  message_row_id_ = message_row_id;
+  message_id_ = message_id;
   message_size_ = message_size;
   is_read_ = is_read;
   is_flagged_ = is_flagged;
@@ -871,7 +1490,7 @@ OutlookEMailEnumerator::OutlookEMailEnumerator(OutlookFolder *outlook_folder) {
 
 Object *OutlookEMailEnumerator::get_Current() {
   return new OutlookEMailMessage(outlook_folder_,
-                                 curr_message_row_id_,
+                                 curr_message_id_,
                                  curr_message_size_,
                                  curr_message_is_read_,
                                  curr_message_is_flagged_,
@@ -884,32 +1503,23 @@ bool OutlookEMailEnumerator::MoveNext() {
   if (MAPI_content_table_ == NULL) {
     // So we create a new MAPI_content_table_ for starting
     // iterating through the mails.
-    MAPI_content_table_ = outlook_folder_->CreateMAPIContentTable();
+    MAPI_content_table_ = outlook_folder_->CreateMAPIMailContentTable();
     if (MAPI_content_table_ == NULL) {
       // In case of error, we return false indicating empty enumeration.
       return false;
     }
   }
-  ULONG row_id, num, den;
-  // We query the current position of the cursor.
-  HRESULT hr = MAPI_content_table_->QueryPosition(&row_id,
-                                                  &num,
-                                                  &den);
-  if (FAILED(hr)) {
-    return false;
-  }
   // We read 1 row from the content table.
   LPSRowSet rows = NULL;
-  hr = MAPI_content_table_->QueryRows(1,
-                                      0,
-                                      &rows);
+  HRESULT hr = MAPI_content_table_->QueryRows(1, 0, &rows);
   if (FAILED(hr) || rows == NULL || rows->cRows == 0) {
     // In case of failure or we could not read a row we indicate end of
     // iteration
     return false;
   }
   // Store the info about mail in the curr_* fields.
-  curr_message_row_id_ = row_id;
+  curr_message_id_ = COutlookAPI::EntryIdToString(
+      rows->aRow[0].lpProps[0].Value.bin);
   curr_message_size_ = rows->aRow[0].lpProps[2].Value.l;
   curr_message_is_read_ =
       (rows->aRow[0].lpProps[3].Value.l & MSGFLAG_READ) != 0;
@@ -932,7 +1542,7 @@ void OutlookEMailEnumerator::Reset() {
   if (MAPI_content_table_ != NULL) {
     MAPI_content_table_->Release();
     MAPI_content_table_ = NULL;
-    curr_message_row_id_ = 0;
+    curr_message_id_ = NULL;
   }
 }
 

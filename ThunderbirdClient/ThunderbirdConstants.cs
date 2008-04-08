@@ -133,6 +133,12 @@ namespace Google.Thunderbird {
       }
     }
 
+    internal static string CarriageReturn {
+      get {
+        return "\r\n";
+      }
+    }
+
     internal const string Inbox = "Inbox";
 
     internal const string Sent = "Sent";

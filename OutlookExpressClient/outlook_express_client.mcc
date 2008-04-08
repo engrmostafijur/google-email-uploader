@@ -13,13 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "./outlook_express_client.h"
+#include "./outlook_express_client.mh"
 
 namespace Google {
 namespace OutlookExpressClient {
 
 OutlookExpressClient::OutlookExpressClient() {
   store_list_ = new ArrayList();
+  contacts_list_ = new ArrayList();
   loaded_store_file_names_ = new ArrayList();
   HRESULT hr = CoInitialize(0);
   if (FAILED(hr)) {
@@ -65,6 +66,7 @@ OutlookExpressStore::OutlookExpressStore(
   outlook_express_client_ = outlook_express_client;
   store_namespace_ = store_namespace;
   name_ = "OE Store";
+  contact_list_ = new ArrayList();
 }
 
 void OutlookExpressStore::Dispose() {

@@ -19,6 +19,7 @@ using System.IO;
 using System.Text;
 
 using Google.MailClientInterfaces;
+using System.Globalization;
 
 namespace Google.Thunderbird {
   internal class ThunderbirdFolder : IFolder {
@@ -113,7 +114,7 @@ namespace Google.Thunderbird {
                   line.Length - xMozillaStatusLen + 1);
               int statusNum = 0;
               try {
-                statusNum = int.Parse(status);
+                statusNum = int.Parse(status, NumberStyles.HexNumber);
               } catch {
                 // The flow should never reach here if the mbox file is correct.
                 // In case it reaches here we will assume that there was an

@@ -306,11 +306,13 @@ namespace GoogleEmailUploader {
   /// Class encapsulating the authentication logic.
   /// </summary>
   class GoogleAuthenticator {
+    const string CheckPasswordTemplate =
+        "accountType={0}&Email={1}&Passwd={2}&source={3}";
+    const string CheckPasswordCAPTCHATemplate =
+        "accountType={0}&Email={1}&Passwd={2}&source={3}"
+          + "&logintoken={4}&logincaptcha={5}";
     const string AuthenticateTemplate =
         "accountType={0}&Email={1}&Passwd={2}&service={3}&source={4}";
-    const string AuthenticateCAPTCHATemplate =
-        "accountType={0}&Email={1}&Passwd={2}&service={3}&source={4}"
-          + "&logintoken={5}&logincaptcha={6}";
     const string AuthenticationURL =
         "https://www.google.com/accounts/ClientLogin";
     const string CAPTCHAURLPrefix = "http://www.google.com/accounts/";
@@ -338,7 +340,6 @@ namespace GoogleEmailUploader {
     readonly IHttpFactory HttpFactory;
     readonly string AccountTypeName;
     readonly string ApplicationName;
-    readonly string ServiceName;
 
     /// <summary>
     /// Constructor of GoogleAuthenticator.
@@ -351,8 +352,7 @@ namespace GoogleEmailUploader {
     /// </param>
     internal GoogleAuthenticator(IHttpFactory httpFactory,
                                  AccountType accountType,
-                                 string applicationName,
-                                 string serviceName) {
+                                 string applicationName) {
       this.HttpFactory = httpFactory;
       switch (accountType) {
         case AccountType.Google:
@@ -366,7 +366,6 @@ namespace GoogleEmailUploader {
           break;
       }
       this.ApplicationName = applicationName;
-      this.ServiceName = serviceName;
     }
 
     Image DownloadCAPTCHAImage(string captchaUrl) {
@@ -461,10 +460,10 @@ namespace GoogleEmailUploader {
             return AuthenticationResponse.CreateFailureResponse(
                 AuthenticationResultKind.ServiceUnavailable, urlValue);
         }
-      } else if (authValue != null) {
+      } else if (lsidValue != null) {
         // Since google services do not use sid and lsid,
         // we can ignore the case where sidValue and lsidValue are null.
-        Debug.Assert(sidValue != null && lsidValue != null);
+        Debug.Assert(sidValue != null);
         return AuthenticationResponse.CreateAuthenticatedResponse(
             authValue,
             sidValue,
@@ -474,10 +473,11 @@ namespace GoogleEmailUploader {
     }
 
     /// <summary>
-    /// Autenticate email and password
+    /// Autenticate with email and password for particular service
     /// </summary>
-    internal AuthenticationResponse Authenticate(string emailId,
-                                                 string password) {
+    internal AuthenticationResponse AuthenticateForService(string emailId,
+                                                           string password,
+                                                           string serviceName) {
       int atIndex = emailId.IndexOf('@');
       if (atIndex == -1 || atIndex >= emailId.Length) {
         return AuthenticationResponse.CreateFailureResponse(
@@ -490,15 +490,36 @@ namespace GoogleEmailUploader {
               this.AccountTypeName,
               emailId,
               password,
-              this.ServiceName,
+              serviceName,
               this.ApplicationName);
       return this.AuthenticateAndParseResponse(requestString);
     }
 
     /// <summary>
-    /// Authenticate email and password with CAPTCHA solution
+    /// Check email and password
     /// </summary>
-    internal AuthenticationResponse AuthenticateCAPTCHA(
+    internal AuthenticationResponse CheckPassword(string emailId,
+                                                  string password) {
+      int atIndex = emailId.IndexOf('@');
+      if (atIndex == -1 || atIndex >= emailId.Length) {
+        return AuthenticationResponse.CreateFailureResponse(
+            AuthenticationResultKind.BadAuthentication,
+            null);
+      }
+      string requestString =
+          string.Format(
+              GoogleAuthenticator.CheckPasswordTemplate,
+              this.AccountTypeName,
+              emailId,
+              password,
+              this.ApplicationName);
+      return this.AuthenticateAndParseResponse(requestString);
+    }
+
+    /// <summary>
+    /// Check email and password with CAPTCHA solution
+    /// </summary>
+    internal AuthenticationResponse CheckPasswordCAPTCHA(
         string emailId,
         string password,
         string captchaToken,
@@ -511,11 +532,10 @@ namespace GoogleEmailUploader {
       }
       string requestString =
           string.Format(
-              GoogleAuthenticator.AuthenticateCAPTCHATemplate,
+              GoogleAuthenticator.CheckPasswordCAPTCHATemplate,
               this.AccountTypeName,
               emailId,
               password,
-              this.ServiceName,
               this.ApplicationName,
               captchaToken,
               captchaSolution);

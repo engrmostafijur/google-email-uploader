@@ -59,6 +59,14 @@ __gc public class OutlookExpressClient : public IClient {
     return "Outlook Express";
   }
 
+  __property bool get_SupportsContacts(){
+    return false;
+  }
+  
+  __property bool get_SupportsLoadingStore() {
+    return false;
+  }
+
   __property IEnumerable *get_Stores() {
     Debug::Assert(store_list_ != NULL);
     return store_list_;
@@ -76,6 +84,7 @@ __gc public class OutlookExpressClient : public IClient {
  private:
   // store_list == NULL implies disposed.
   ArrayList *store_list_;
+  ArrayList *contacts_list_;
   ArrayList *loaded_store_file_names_;
 };
 
@@ -101,6 +110,16 @@ __gc class OutlookExpressStore : public IStore {
     return name_;
   }
 
+  __property IEnumerable *get_Contacts() {
+    Debug::Assert(outlook_express_client_ != NULL);
+    return contact_list_;
+  }
+
+  __property unsigned int get_ContactCount() {
+    Debug::Assert(outlook_express_client_ != NULL);
+    return static_cast<unsigned int>(contact_list_->Count);
+  }
+
   __property IEnumerable *get_Folders();
 
  public private:
@@ -119,6 +138,7 @@ __gc class OutlookExpressStore : public IStore {
   String *name_;
   IStoreNamespace *store_namespace_;
   ArrayList *folder_list_;
+  ArrayList *contact_list_;
 };
 
 // folder owns subfolders.
@@ -268,7 +288,7 @@ public:
     clientProcessNames->Add(new String("msimn"));
   }
 
-  IEnumerable *get_ClientProcessNames(){
+  __property IEnumerable *get_ClientProcessNames(){
     return clientProcessNames;
   }
 

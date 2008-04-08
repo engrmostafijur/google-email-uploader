@@ -55,6 +55,13 @@ namespace Google.MailClientInterfaces {
     }
 
     /// <summary>
+    /// Identifies if the client supports contacts.
+    /// </summary>
+    bool SupportsContacts {
+      get;
+    }
+
+    /// <summary>
     /// For opening a new store using the client. For example: opening mbox 
     /// file in Thunderbird or pst in Outlook. If successful the opened store
     /// is added to the enumeration returned by Stores.
@@ -69,10 +76,17 @@ namespace Google.MailClientInterfaces {
     IEnumerable LoadedStoreFileNames {
       get;
     }
+
+    /// <summary>
+    /// Identifies whether the client supports a loaded store.
+    /// </summary>
+    bool SupportsLoadingStore {
+      get;
+    }
   }
 
   /// <summary>
-  /// The store containing the client emails.
+  /// The store containing the client email.
   /// </summary>
   public interface IStore {
     /// <summary>
@@ -100,6 +114,20 @@ namespace Google.MailClientInterfaces {
     /// Folders in the store.
     /// </summary>
     IEnumerable Folders {
+      get;
+    }
+
+    /// <summary>
+    /// Count of number of contacts in the store.
+    /// </summary>
+    uint ContactCount {
+      get;
+    }
+  
+    /// <summary>
+    /// Returns the list of contacts available with the client
+    /// </summary>
+    IEnumerable Contacts {
       get;
     }
   }
@@ -178,7 +206,7 @@ namespace Google.MailClientInterfaces {
     }
 
     /// <summary>
-    /// Enumeration of the emails in this folder.
+    /// Enumeration of the email in this folder.
     /// </summary>
     /// <remarks>
     /// To implementers: It is recomended that the mails are not stored in
@@ -193,7 +221,7 @@ namespace Google.MailClientInterfaces {
   }
 
   /// <summary>
-  /// Represents the actual mail.
+  /// Represents the email.
   /// </summary>
   public interface IMail : IDisposable {
     /// <summary>
@@ -241,6 +269,171 @@ namespace Google.MailClientInterfaces {
     /// </summary>
     byte[] Rfc822Buffer {
       get;
+    }
+  }
+
+  /// <summary>
+  /// Represents the contact.
+  /// </summary>
+  public interface IContact : IDisposable {
+    string ContactId {
+      get;
+    }
+
+    string Title {
+      get;
+    }
+
+    string OrganizationName {
+      get;
+    }
+
+    string OrganizationTitle {
+      get;
+    }
+
+    string HomePageUrl {
+      get;
+    }
+
+    string Notes {
+      get;
+    }
+
+    IEnumerable EmailAddresses {
+      get;
+    }
+
+    IEnumerable IMIdentities {
+      get;
+    }
+
+    IEnumerable PhoneNumbers {
+      get;
+    }
+
+    IEnumerable PostalAddresses {
+      get;
+    }
+  }
+
+  public enum ContactRelation {
+    Home,
+    Mobile,
+    Pager,
+    Work,
+    HomeFax,
+    WorkFax,
+    Other,
+    Label,
+  }
+
+  public class ContactElement {
+    string label;
+    ContactRelation relation;
+
+    public ContactElement(string label,
+                          ContactRelation relation) {
+      this.label = label;
+      this.relation = relation;
+    }
+
+    public string Label {
+      get {
+        return this.label;
+      }
+    }
+
+    public ContactRelation Relation {
+      get {
+        return this.relation;
+      }
+    }
+  }
+
+  public class EmailContact : ContactElement {
+    string emailAddress;
+    bool isPrimary;
+
+    public EmailContact(string emailAddress,
+                        string label,
+                        ContactRelation relation,
+                        bool isPrimary)
+      : base(label, relation) {
+      this.emailAddress = emailAddress;
+      this.isPrimary = isPrimary;
+    }
+
+    public string EmailAddress {
+      get {
+        return this.emailAddress;
+      }
+    }
+
+    public bool IsPrimary {
+      get {
+        return this.isPrimary;
+      }
+    }
+  }
+
+  public class IMContact : ContactElement {
+    string imAddress;
+    string protocol;
+
+    public IMContact(string imAddress,
+                     string protocol,
+                     string label,
+                     ContactRelation relation)
+      : base(label, relation) {
+      this.imAddress = imAddress;
+      this.protocol = protocol;
+    }
+
+    public string IMAddress {
+      get {
+        return this.imAddress;
+      }
+    }
+
+    public string Protocol {
+      get {
+        return this.protocol;
+      }
+    }
+  }
+
+  public class PhoneContact : ContactElement {
+    string phoneNumber;
+
+    public PhoneContact(string phoneNumber,
+                        string label,
+                        ContactRelation relation)
+      : base(label, relation) {
+      this.phoneNumber = phoneNumber;
+    }
+
+    public string PhoneNumber {
+      get {
+        return this.phoneNumber;
+      }
+    }
+  }
+
+  public class PostalContact : ContactElement {
+    string postalAddress;
+
+    public PostalContact(string postalAddress,
+                         string label,
+                         ContactRelation relation)
+      : base(label, relation) {
+      this.postalAddress = postalAddress;
+    }
+
+    public string PostalAddress {
+      get {
+        return this.postalAddress;
+      }
     }
   }
 

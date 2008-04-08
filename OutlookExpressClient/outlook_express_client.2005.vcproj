@@ -172,21 +172,35 @@
 	<Files>
 		<Filter
 			Name="Source Files"
-			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
+			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx;mcc"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\assembly_info.cc"
+				RelativePath=".\assembly_info.mcc"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\outlook_express_client.cc"
+				RelativePath=".\outlook_express_client.mcc"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
-			Filter="h;hpp;hxx;hm;inl;inc;xsd"
+			Filter="h;hpp;hxx;hm;inl;inc;xsd;mh"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
@@ -198,7 +212,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\outlook_express_client.h"
+				RelativePath=".\outlook_express_client.mh"
 				>
 			</File>
 		</Filter>

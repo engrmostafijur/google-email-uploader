@@ -29,13 +29,17 @@ namespace Google.Thunderbird {
     bool starred;
     uint messageSize;
     byte[] message;
+    Encoding encoding;
+    int carriageReturnSize;
 
     internal ThunderbirdEmailMessage(ThunderbirdFolder folder,
                                      string mailId,
                                      bool read,
                                      bool starred,
                                      long initialMessagePosition,
-                                     long finalMessagePosition) {
+                                     long finalMessagePosition,
+                                     Encoding encoding,
+                                     int carriageReturnSize) {
       this.folder = folder;
       this.mailId = mailId;
       this.read = read;
@@ -44,6 +48,8 @@ namespace Google.Thunderbird {
       this.finalMessagePosition = finalMessagePosition;
       this.messageSize = 
           (uint)(this.finalMessagePosition - this.initialMessagePosition);
+      this.encoding = encoding;
+      this.carriageReturnSize = carriageReturnSize;
     }
 
     public IFolder Folder {
@@ -86,15 +92,13 @@ namespace Google.Thunderbird {
         }
 
         try {
-          Encoding encoding;
           using (FileStream fileReader = File.OpenRead(folder.FolderPath)) {
             fileReader.Seek(this.initialMessagePosition, SeekOrigin.Begin);
             using (StreamReader fileStreamReader =
-                new StreamReader(fileReader, Encoding.Default)) {
+                new StreamReader(fileReader, this.encoding)) {
               bool hasFromField = false;
               bool hasDateField = false;
 
-              encoding = fileStreamReader.CurrentEncoding;
               StringBuilder messageString = new StringBuilder();
               messageString.Capacity = (int)this.messageSize;
               string line = "";
@@ -113,10 +117,11 @@ namespace Google.Thunderbird {
                   hasDateField = true;
                 }
 
-                count += encoding.GetByteCount(line) + 2;
+                count +=
+                    this.encoding.GetByteCount(line) + this.carriageReturnSize;
 
                 // Considering the boundary condition here.
-                if (count >= this.messageSize) {
+                if (count > this.messageSize) {
                   break;
                 }
                 messageString.Append(line);
@@ -126,7 +131,7 @@ namespace Google.Thunderbird {
               // Check whether the message complies with the rfc882
               // specifications.
               if (hasFromField && hasDateField) {
-                this.message = encoding.GetBytes(messageString.ToString());
+                this.message = this.encoding.GetBytes(messageString.ToString());
               } else {
                 this.message = new byte[0];
               }
