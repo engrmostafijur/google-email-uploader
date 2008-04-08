@@ -85,13 +85,22 @@ namespace Google.Thunderbird {
       }
     }
 
+    public bool SupportsContacts {
+      get { return false; }
+    }
+
+    public bool SupportsLoadingStore {
+      get {
+        return true;
+      }
+    }
+
     public IEnumerable Stores {
       get {
         return this.stores;
       }
     }
 
-    // TODO: Add store names which are explicily loaded by the user.
     public IEnumerable LoadedStoreFileNames {
       get {
         return this.storeFileNames;

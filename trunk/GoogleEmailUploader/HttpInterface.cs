@@ -35,6 +35,11 @@ namespace GoogleEmailUploader {
     /// Create a http post request.
     /// </summary>
     IHttpRequest CreatePostRequest(string url);
+
+    /// <summary>
+    /// Create a http put request.
+    /// </summary>
+    IHttpRequest CreatePutRequest(string url);
   }
 
   /// <summary>
@@ -83,6 +88,14 @@ namespace GoogleEmailUploader {
   /// Interface representing http response.
   /// </summary>
   public interface IHttpResponse {
+
+    /// <summary>
+    /// Returns the http headers as a string.
+    /// </summary>
+    string Headers {
+      get;
+    }
+
     /// <summary>
     /// Get the response stream to read the conent of response
     /// </summary>
@@ -112,6 +125,17 @@ namespace GoogleEmailUploader {
     /// Connection closed because of large upload.
     /// </summary>
     BadGateway,
+
+    /// <summary>
+    /// The request could not be carried out because of a conflict
+    /// on the server.
+    /// </summary>
+    Conflict,
+
+    /// <summary>
+    /// The request had some errors.
+    /// </summary>
+    BadRequest,
 
     /// <summary>
     /// Corresponds to WebExceptionStatus.ProtocolError which is not one of the
@@ -154,47 +178,79 @@ namespace GoogleEmailUploader {
       }
     }
 
-    internal static HttpException FromWebException(WebException webException) {
-      GoogleEmailUploaderTrace.WriteLine(webException.ToString());
-      HttpResponse httpResponse = null;
-      if (webException.Response != null) {
-        httpResponse = new HttpResponse((HttpWebResponse)webException.Response);
-      }
-      HttpExceptionStatus httpExceptionStatus;
-      switch (webException.Status) {
-        case WebExceptionStatus.ProtocolError:
-          if (webException.Response != null) {
-            HttpStatusCode httpStatusCode =
-                ((HttpWebResponse)webException.Response).StatusCode;
-            if (httpStatusCode == HttpStatusCode.Unauthorized) {
-              httpExceptionStatus = HttpExceptionStatus.Unauthorized;
-              break;
-            } else if (httpStatusCode == HttpStatusCode.Forbidden) {
-              httpExceptionStatus = HttpExceptionStatus.Forbidden;
-              break;
-            } else if (httpStatusCode == HttpStatusCode.BadGateway) {
-              httpExceptionStatus = HttpExceptionStatus.BadGateway;
-              break;
-            }
+    public string GetResponseString() {
+      string exceptionResponseString = string.Empty;
+      if (response != null) {
+        using (Stream respStream = response.GetResponseStream()) {
+          using (StreamReader textReader = new StreamReader(respStream)) {
+            exceptionResponseString = textReader.ReadToEnd();
           }
-          httpExceptionStatus = HttpExceptionStatus.ProtocolError;
-          break;
-        case WebExceptionStatus.Timeout:
-          httpExceptionStatus = HttpExceptionStatus.Timeout;
-          break;
-        default:
-          httpExceptionStatus = HttpExceptionStatus.Other;
-          break;
+        }
       }
-      return new HttpException(webException.Message,
-                               httpExceptionStatus,
-                               httpResponse);
+      return exceptionResponseString;
+    }
+
+    internal static HttpException FromWebException(WebException webException) {
+      try {
+        GoogleEmailUploaderTrace.EnteringMethod(
+            "HttpException.FromWebException");
+        GoogleEmailUploaderTrace.WriteLine(
+            "Exception ({0}): {1}",
+            webException.Status.ToString(),
+            webException.ToString());
+        HttpResponse httpResponse = null;
+        if (webException.Response != null) {
+          GoogleEmailUploaderTrace.WriteLine(
+              "Headers: {0}",
+              webException.Response.Headers.ToString());
+          httpResponse = new HttpResponse((HttpWebResponse)webException.Response);
+        }
+        HttpExceptionStatus httpExceptionStatus;
+        switch (webException.Status) {
+          case WebExceptionStatus.ProtocolError:
+            if (webException.Response != null) {
+              HttpStatusCode httpStatusCode =
+                  ((HttpWebResponse)webException.Response).StatusCode;
+              if (httpStatusCode == HttpStatusCode.Unauthorized) {
+                httpExceptionStatus = HttpExceptionStatus.Unauthorized;
+                break;
+              } else if (httpStatusCode == HttpStatusCode.Forbidden) {
+                httpExceptionStatus = HttpExceptionStatus.Forbidden;
+                break;
+              } else if (httpStatusCode == HttpStatusCode.BadGateway) {
+                httpExceptionStatus = HttpExceptionStatus.BadGateway;
+                break;
+              } else if (httpStatusCode == HttpStatusCode.Conflict) {
+                httpExceptionStatus = HttpExceptionStatus.Conflict;
+                break;
+              } else if (httpStatusCode == HttpStatusCode.BadRequest) {
+                httpExceptionStatus = HttpExceptionStatus.BadRequest;
+                break;
+              }
+            }
+            httpExceptionStatus = HttpExceptionStatus.ProtocolError;
+            break;
+          case WebExceptionStatus.Timeout:
+            httpExceptionStatus = HttpExceptionStatus.Timeout;
+            break;
+          default:
+            httpExceptionStatus = HttpExceptionStatus.Other;
+            break;
+        }
+        return new HttpException(webException.Message,
+                                 httpExceptionStatus,
+                                 httpResponse);
+      } finally {
+        GoogleEmailUploaderTrace.ExitingMethod(
+            "HttpException.FromWebException");
+      }
     }
   }
 
   class HttpFactory : IHttpFactory {
     IHttpRequest IHttpFactory.CreateGetRequest(string url) {
       try {
+        GoogleEmailUploaderTrace.EnteringMethod("HttpFactory.CreateGetRequest");
         HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
         httpWebRequest.Method = "GET";
         httpWebRequest.KeepAlive = false;
@@ -202,13 +258,32 @@ namespace GoogleEmailUploader {
         return new HttpRequest(httpWebRequest);
       } catch (WebException we) {
         throw HttpException.FromWebException(we);
+      } finally {
+        GoogleEmailUploaderTrace.ExitingMethod("HttpFactory.CreateGetRequest");
       }
     }
 
     IHttpRequest IHttpFactory.CreatePostRequest(string url) {
       try {
+        GoogleEmailUploaderTrace.EnteringMethod(
+            "HttpFactory.CreatePostRequest");
         HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
         httpWebRequest.Method = "POST";
+        httpWebRequest.AllowAutoRedirect = false;
+        httpWebRequest.KeepAlive = false;
+        httpWebRequest.ProtocolVersion = HttpVersion.Version10;
+        return new HttpRequest(httpWebRequest);
+      } catch (WebException we) {
+        throw HttpException.FromWebException(we);
+      } finally {
+        GoogleEmailUploaderTrace.ExitingMethod("HttpFactory.CreatePostRequest");
+      }
+    }
+
+    IHttpRequest IHttpFactory.CreatePutRequest(string url) {
+      try {
+        HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
+        httpWebRequest.Method = "PUT";
         httpWebRequest.AllowAutoRedirect = false;
         httpWebRequest.KeepAlive = false;
         httpWebRequest.ProtocolVersion = HttpVersion.Version10;
@@ -258,19 +333,32 @@ namespace GoogleEmailUploader {
 
     Stream IHttpRequest.GetRequestStream() {
       try {
+        GoogleEmailUploaderTrace.EnteringMethod(
+            "HttpRequest.GetRequestStream");
         return this.httpWebRequest.GetRequestStream();
       } catch (WebException we) {
         throw HttpException.FromWebException(we);
+      } finally {
+        GoogleEmailUploaderTrace.ExitingMethod(
+            "HttpRequest.GetRequestStream");
       }
     }
 
     IHttpResponse IHttpRequest.GetResponse() {
       try {
+        GoogleEmailUploaderTrace.EnteringMethod(
+            "HttpRequest.GetResponse");
+        GoogleEmailUploaderTrace.WriteLine(
+            "Headers: {0}",
+            this.httpWebRequest.Headers.ToString());
         HttpWebResponse httpWebResponse =
             (HttpWebResponse)this.httpWebRequest.GetResponse();
         return new HttpResponse(httpWebResponse);
       } catch (WebException we) {
         throw HttpException.FromWebException(we);
+      } finally {
+        GoogleEmailUploaderTrace.ExitingMethod(
+            "HttpRequest.GetResponse");
       }
     }
 
@@ -281,10 +369,23 @@ namespace GoogleEmailUploader {
     HttpWebResponse httpWebResponse;
 
     internal HttpResponse(HttpWebResponse httpWebResponse) {
+      GoogleEmailUploaderTrace.EnteringMethod(
+          "HttpResponse.HttpResponse");
+      GoogleEmailUploaderTrace.WriteLine(
+          "Headers: {0}",
+          httpWebResponse.Headers.ToString());
       this.httpWebResponse = httpWebResponse;
+      GoogleEmailUploaderTrace.ExitingMethod(
+          "HttpResponse.HttpResponse");
     }
 
     #region IHttpResponse Members
+
+    string IHttpResponse.Headers {
+      get {
+        return httpWebResponse.Headers.ToString();
+      }
+    }
 
     Stream IHttpResponse.GetResponseStream() {
       try {

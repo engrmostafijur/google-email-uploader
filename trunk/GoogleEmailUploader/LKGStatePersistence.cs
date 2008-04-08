@@ -19,35 +19,38 @@ using System.Windows.Forms;
 using System.Xml;
 
 // Sample of persisted xml
-// <GoogleEmailUploader>
-//   <User EMailId="foo@bar.com">
-//     <Client Name="Microsoft Outlook" SelectionState="True">
-//       <Store DisplayName="Personal Folders" Persist="Personal Folders" SelectionState="True">
-//         <Folder Name="Deleted Items" SelectionState="True" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="" />
-//         <Folder Name="Inbox" SelectionState="True" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="" />
-//         <Folder Name="Sent Items" SelectionState="True" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="" />
-//         <Folder Name="Drafts" SelectionState="True" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="" />
-//         <Folder Name="dd" SelectionState="True" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="">
-//           <Folder Name="ff" SelectionState="True" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="" />
-//         </Folder>
-//       </Store>
-//     </Client>
-//     <Client Name="Outlook Express" SelectionState="False">
-//       <Store DisplayName="OE Store" Persist="OE Store" SelectionState="False">
-//         <Folder Name="Bar" SelectionState="False" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="">
-//           <Folder Name="Car" SelectionState="False" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="">
-//             <Folder Name="Tar" SelectionState="False" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="" />
-//           </Folder>
-//         </Folder>
-//         <Folder Name="Deleted Items" SelectionState="False" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="" />
-//         <Folder Name="Drafts" SelectionState="False" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="" />
-//         <Folder Name="Inbox" SelectionState="False" UploadedMailCount="1" FailedMailCount="0" LastUploadedMailId="24" />
-//         <Folder Name="Outbox" SelectionState="False" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="" />
-//         <Folder Name="Sent Items" SelectionState="False" UploadedMailCount="0" FailedMailCount="0" LastUploadedMailId="" />
-//       </Store>
-//     </Client>
-//   </User>
-// </GoogleEmailUploader>
+//<GoogleEmailUploader>
+//  <User EmailId="foo@bar.com" ArchiveEverything="False" UploadSpeed="0.0022068824276766" FolderToLabelMapping="True">
+//    <Client Name="Microsoft Outlook" SelectionState="False">
+//      <Store DisplayName="Insight Server Folders" Persist="0000000038A1BB1005E5101AA1BB08002B2A56C20000436F6E6E6563746F722E646C6C00433A5C446F63756D656E747320616E642053657474696E67735C706172616D5C4170706C69636174696F6E20446174615C42796E6172695C42796E61726920496E736967687420436F6E6E6563746F7220332E305C4163636F756E74735C706172616D2D62795C666F6F40746573742E636F6D315C4C6F63616C43616368652E646200" SelectionState="False">
+//        <Contact SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//      </Store>
+//    </Client>
+//    <Client Name="Outlook Express" SelectionState="False">
+//      <Store DisplayName="OE Store" Persist="OE Store" SelectionState="False">
+//        <Contact SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//        <Folder Name="Deleted Items" SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//        <Folder Name="Drafts" SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//        <Folder Name="Inbox" SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//        <Folder Name="Outbox" SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//        <Folder Name="Sent Items" SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//      </Store>
+//    </Client>
+//    <Client Name="Thunderbird" SelectionState="False">
+//      <Store DisplayName="Local Folders" Persist="Local Folders" SelectionState="False">
+//        <Contact SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//        <Folder Name="Temp" SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//        <Folder Name="Trash" SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//        <Folder Name="Unsent Messages" SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//      </Store>
+//      <Store DisplayName="pop.gmail.com" Persist="pop.gmail.com" SelectionState="False">
+//        <Contact SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//        <Folder Name="Inbox" SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//        <Folder Name="Trash" SelectionState="False" UploadedItemCount="0" FailedItemCount="0" LastUploadedItemId="" />
+//      </Store>
+//    </Client>
+//  </User>
+//</GoogleEmailUploader>
 
 namespace GoogleEmailUploader {
 
@@ -68,10 +71,13 @@ namespace GoogleEmailUploader {
     const string ClientElementName = "Client";
     const string LoadedStoreElementName = "LoadedStore";
     const string StoreElementName = "Store";
+    const string ContactsElementName = "Contacts";
     const string FolderElementName = "Folder";
-    const string FailedMailName = "FailedMail";
-    const string ReasonAttrName = "Reason";
-    const string EmailIdAttrName = "EmailId";
+    const string MailElementName = "Mail";
+    const string MailIdAttrName = "MailId";
+    const string ContactElementName = "Contact";
+    const string ContactIdAttrName = "ContactId";
+    const string FailureReasonAttrName = "FailureReason";
     const string ArchiveEverythingAttrName = "ArchiveEverything";
     const string FolderToLabelMappingAttrName = "FolderToLabelMapping";
     const string UploadSpeedAttrName = "UploadSpeed";
@@ -80,9 +86,6 @@ namespace GoogleEmailUploader {
     const string DisplayNameAttrName = "DisplayName";
     const string PathAttrName = "Path";
     const string PersistNameAttrName = "Persist";
-    const string UploadedMailCountAttrName = "UploadedMailCount";
-    const string FailedMailCountAttrName = "FailedMailCount";
-    const string LastUploadedMailIdAttrName = "LastUploadedMailId";
 
     readonly string lkgStateFilePath;
     readonly string emailId;
@@ -142,7 +145,7 @@ namespace GoogleEmailUploader {
           this.googleEmailUploaderXmlElement.ChildNodes) {
         if (xmlElement.Name == LKGStatePersistor.UserElementName) {
           string emailId =
-              xmlElement.GetAttribute(LKGStatePersistor.EmailIdAttrName);
+              xmlElement.GetAttribute(LKGStatePersistor.MailIdAttrName);
           if (emailId == this.emailId) {
             return xmlElement;
           }
@@ -151,7 +154,7 @@ namespace GoogleEmailUploader {
       XmlElement newXmlElement =
           this.xmlDocument.CreateElement(LKGStatePersistor.UserElementName);
       newXmlElement.SetAttribute(
-          LKGStatePersistor.EmailIdAttrName,
+          LKGStatePersistor.MailIdAttrName,
           this.emailId);
       this.googleEmailUploaderXmlElement.AppendChild(newXmlElement);
       return newXmlElement;
@@ -178,42 +181,29 @@ namespace GoogleEmailUploader {
       LKGStatePersistor.LoadSelectedState(
           folderXmlElement,
           folderModel);
-      string uploadedMailCount =
-          folderXmlElement.GetAttribute(
-              LKGStatePersistor.UploadedMailCountAttrName);
-      try {
-        folderModel.UploadedMailCount = uint.Parse(uploadedMailCount);
-      } catch {
-        folderModel.UploadedMailCount = 0;
-      }
-      string failedMailCount =
-          folderXmlElement.GetAttribute(
-              LKGStatePersistor.FailedMailCountAttrName);
-      try {
-        folderModel.FailedMailCount = uint.Parse(failedMailCount);
-      } catch {
-        folderModel.FailedMailCount = 0;
-      }
-      string lastUploadedMailId =
-          folderXmlElement.GetAttribute(
-              LKGStatePersistor.LastUploadedMailIdAttrName);
-      folderModel.LastUploadedMailId = lastUploadedMailId;
       foreach (XmlNode childXmlNode in folderXmlElement.ChildNodes) {
         XmlElement childXmlElement = childXmlNode as XmlElement;
         if (childXmlElement == null) {
           continue;
         }
-        if (childXmlElement.Name != LKGStatePersistor.FailedMailName) {
+        if (childXmlElement.Name != LKGStatePersistor.MailElementName) {
+          continue;
+        }
+        string mailId =
+            childXmlElement.GetAttribute(LKGStatePersistor.MailIdAttrName);
+        if (mailId == null || mailId.Length == 0) {
           continue;
         }
         string failureReason =
-            childXmlElement.GetAttribute(LKGStatePersistor.ReasonAttrName);
-        if (failureReason == null) {
-          failureReason = "Unknown";
+            childXmlElement.GetAttribute(
+                LKGStatePersistor.FailureReasonAttrName);
+        if (failureReason == null || failureReason.Length == 0) {
+          folderModel.SuccessfullyUploaded(mailId);
+        } else {
+          FailedMailDatum failedMailDatum =
+            new FailedMailDatum(childXmlElement.InnerText, failureReason);
+          folderModel.FailedToUpload(mailId, failedMailDatum);
         }
-        FailedMailDatum failedMailDatum =
-          new FailedMailDatum(childXmlElement.InnerText, failureReason);
-        folderModel.FailedMailData.Add(failedMailDatum);
       }
       this.LoadFolderModelsState(
           folderXmlElement.ChildNodes,
@@ -248,6 +238,43 @@ namespace GoogleEmailUploader {
     }
 
     /// <summary>
+    /// Loads the selection state of the contacts in the given store.
+    /// </summary>
+    void LoadContactsState(XmlElement contactsXmlElement,
+                           StoreModel storeModel) {
+      if (contactsXmlElement.GetAttribute(
+            LKGStatePersistor.SelectionStateAttrName) == bool.FalseString) {
+        storeModel.IsContactSelected = false;
+      } else {
+        storeModel.IsContactSelected = true;
+      }
+      foreach (XmlNode childXmlNode in contactsXmlElement.ChildNodes) {
+        XmlElement childXmlElement = childXmlNode as XmlElement;
+        if (childXmlElement == null) {
+          continue;
+        }
+        if (childXmlElement.Name != LKGStatePersistor.ContactElementName) {
+          continue;
+        }
+        string contactId =
+            childXmlElement.GetAttribute(LKGStatePersistor.ContactIdAttrName);
+        if (contactId == null || contactId.Length == 0) {
+          continue;
+        }
+        string failureReason =
+            childXmlElement.GetAttribute(
+                LKGStatePersistor.FailureReasonAttrName);
+        if (failureReason == null || failureReason.Length == 0) {
+          storeModel.SuccessfullyUploaded(contactId);
+        } else {
+          FailedContactDatum failedContactDatum =
+            new FailedContactDatum(childXmlElement.InnerText, failureReason);
+          storeModel.FailedToUpload(contactId, failedContactDatum);
+        }
+      }
+    }
+
+    /// <summary>
     /// Loads the selection state of the store, and then loads all the
     /// state of all the subfolders.
     /// </summary>
@@ -256,6 +283,17 @@ namespace GoogleEmailUploader {
       LKGStatePersistor.LoadSelectedState(
           storeXmlElement,
           storeModel);
+      foreach (XmlNode childXmlNode in storeXmlElement.ChildNodes) {
+        XmlElement childXmlElement = childXmlNode as XmlElement;
+        if (childXmlElement == null) {
+          continue;
+        }
+        if (childXmlElement.Name != LKGStatePersistor.ContactsElementName) {
+          continue;
+        }
+        this.LoadContactsState(childXmlElement, storeModel);
+        break;
+      }
       this.LoadFolderModelsState(
           storeXmlElement.ChildNodes,
           storeModel.Children);
@@ -347,6 +385,9 @@ namespace GoogleEmailUploader {
       double uploadSpeed;
       try {
         uploadSpeed = double.Parse(uploadSpeedString);
+        if (uploadSpeed <= 0.0) {
+          uploadSpeed = 0.00005;
+        }
         uploaderModel.SetUploadSpeed(uploadSpeed);
       } catch {
         // If we get an exception we dont update the speed. Let the speed
@@ -388,29 +429,61 @@ namespace GoogleEmailUploader {
       folderXmlElement.SetAttribute(
           LKGStatePersistor.SelectionStateAttrName,
           folderModel.IsSelected.ToString());
-      folderXmlElement.SetAttribute(
-          LKGStatePersistor.UploadedMailCountAttrName,
-          folderModel.UploadedMailCount.ToString());
-      folderXmlElement.SetAttribute(
-          LKGStatePersistor.FailedMailCountAttrName,
-          folderModel.FailedMailCount.ToString());
-      folderXmlElement.SetAttribute(
-          LKGStatePersistor.LastUploadedMailIdAttrName,
-          folderModel.LastUploadedMailId);
-      foreach (FailedMailDatum failedMailDatum in folderModel.FailedMailData) {
-        XmlElement failedMailXmlElement =
+
+      foreach (string mailId in folderModel.MailUploadData.Keys) {
+        XmlElement uploadedEmailXmlElement =
             this.xmlDocument.CreateElement(
-                LKGStatePersistor.FailedMailName);
-        failedMailXmlElement.SetAttribute(
-            LKGStatePersistor.ReasonAttrName,
-            failedMailDatum.FailureReason);
-        folderXmlElement.AppendChild(failedMailXmlElement);
-        failedMailXmlElement.InnerText = failedMailDatum.MailHead;
+                LKGStatePersistor.MailElementName);
+        folderXmlElement.AppendChild(uploadedEmailXmlElement);
+        uploadedEmailXmlElement.SetAttribute(
+            LKGStatePersistor.MailIdAttrName,
+            mailId);
+        FailedMailDatum failedMailDatum =
+            (FailedMailDatum)folderModel.MailUploadData[mailId];
+        if (failedMailDatum != null) {
+          // In case of failure to upload we set the reason, otherwise not.
+          uploadedEmailXmlElement.SetAttribute(
+              LKGStatePersistor.FailureReasonAttrName,
+              failedMailDatum.FailureReason);
+          uploadedEmailXmlElement.InnerText = failedMailDatum.MailHead;
+        }
       }
       foreach (FolderModel childFolderModel in folderModel.Children) {
         this.SaveFolderModelState(
             folderXmlElement,
             childFolderModel);
+      }
+    }
+
+    /// <summary>
+    /// Saves the contact state within the given store.
+    /// </summary>
+    void SaveContactsState(XmlElement storeXmlElement,
+                           StoreModel storeModel) {
+      XmlElement contactsXmlElement =
+          this.xmlDocument.CreateElement(LKGStatePersistor.ContactsElementName);
+      storeXmlElement.AppendChild(contactsXmlElement);
+      contactsXmlElement.SetAttribute(
+          LKGStatePersistor.SelectionStateAttrName,
+          storeModel.IsContactSelected.ToString());
+
+      foreach (string contactId in storeModel.ContactUploadData.Keys) {
+        XmlElement uploadedContactXmlElement =
+            this.xmlDocument.CreateElement(
+                LKGStatePersistor.ContactElementName);
+        contactsXmlElement.AppendChild(uploadedContactXmlElement);
+        uploadedContactXmlElement.SetAttribute(
+            LKGStatePersistor.ContactIdAttrName,
+            contactId);
+        FailedContactDatum failedContactDatum =
+            (FailedContactDatum)storeModel.ContactUploadData[contactId];
+        if (failedContactDatum != null) {
+          // In case of failure to upload we set the reason, otherwise not.
+          uploadedContactXmlElement.SetAttribute(
+              LKGStatePersistor.FailureReasonAttrName,
+              failedContactDatum.FailureReason);
+          uploadedContactXmlElement.InnerText = failedContactDatum.ContactName;
+        }
       }
     }
 
@@ -431,6 +504,7 @@ namespace GoogleEmailUploader {
       storeXmlElement.SetAttribute(
           LKGStatePersistor.SelectionStateAttrName,
           storeModel.IsSelected.ToString());
+      this.SaveContactsState(storeXmlElement, storeModel);
       foreach (FolderModel folderModel in storeModel.Children) {
         this.SaveFolderModelState(
             storeXmlElement,
@@ -477,7 +551,7 @@ namespace GoogleEmailUploader {
     internal void SaveLKGState(GoogleEmailUploaderModel uploaderModel) {
       this.userXmlElement.RemoveAll();
       this.userXmlElement.SetAttribute(
-          LKGStatePersistor.EmailIdAttrName,
+          LKGStatePersistor.MailIdAttrName,
           this.emailId);
       this.userXmlElement.SetAttribute(
           LKGStatePersistor.ArchiveEverythingAttrName,

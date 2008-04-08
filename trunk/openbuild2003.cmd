@@ -3,6 +3,9 @@ echo *************************************************************
 echo ********************Building*********************************
 echo *************************************************************
 
+set LOCALE=%1
+if(%LOCALE%) == () set LOCALE=en-US
+
 REM ***********SETTING COMPILER OPTIONS***************
 set CL_OPTIONS=^
     /nologo^
@@ -79,13 +82,44 @@ set CSC_RELEASE_OPTIONS=^
     /optimize+
 
 REM ***********CREATE OUTPUT DIRECTORIES***************
-set DEBUG_BINDIR=%CD%\bin.2003\Debug
-set RELEASE_BINDIR=%CD%\bin.2003\Release
+set DEBUG_BINDIR=%CD%\bin.2003\Debug\%LOCALE%
+set RELEASE_BINDIR=%CD%\bin.2003\Release\%LOCALE%
 mkdir %DEBUG_BINDIR%
 mkdir %RELEASE_BINDIR%
 
+REM *********** BUILD RESOURCE FILE GENERATOR **********
+pushd ResourceFileGenerator
+echo _____Building ResourceFileGenerator_____
+set RESOURCEFILEGENERATOR_REFERENCES=^
+    /reference:System.dll^
+    /reference:System.Data.dll^
+    /reference:System.Drawing.dll^
+    /reference:System.Windows.Forms.dll^
+    /reference:System.XML.dll
+set RESOURCEFILEGENERATOR_FILES=^
+    Program.cs
+Csc.exe^
+    %CSC_OPTIONS%^
+    %CSC_DEBUG_OPTIONS%^
+    %RESOURCEFILEGENERATOR_REFERENCES%^
+    /out:"%DEBUG_BINDIR%\ResourceFileGenerator.exe"^
+    /target:winexe^
+    %RESOURCEFILEGENERATOR_FILES%
+Csc.exe^
+    %CSC_OPTIONS%^
+    %CSC_RELEASE_OPTIONS%^
+    %RESOURCEFILEGENERATOR_REFERENCES%^
+    /out:"%RELEASE_BINDIR%\ResourceFileGenerator.exe"^
+    /target:winexe^
+    %RESOURCEFILEGENERATOR_FILES%
+popd ResourceFileGenerator
+
 REM **************BUILD GOOGLEEMAILUPLOADER******************
 pushd GoogleEmailUploader
+
+mkdir obj\%LOCALE%
+%RELEASE_BINDIR%\ResourceFileGenerator.exe Resources\%LOCALE%\ui.strings obj\%LOCALE%\Strings.resx
+
 echo _____Building GoogleEmailUploader_____
 set GOOGLEEMAILUPLOADER_REFERENCES=^
     /reference:System.dll^
@@ -105,14 +139,18 @@ set GOOGLEEMAILUPLOADER_FILES=^
     LKGStatePersistence.cs^
     SelectView.cs^
     UploadView.cs
-mkdir obj
-resgen Resources.resx obj\GoogleEmailUploader.Resources.resources
+
+resgen OpenImageResources\Images.resx obj\%LOCALE%\GoogleEmailUploader.Resources.Images.resources
+resgen obj\%LOCALE%\Strings.resx obj\%LOCALE%\GoogleEmailUploader.Resources.Strings.resources
+
 Csc.exe^
     %CSC_OPTIONS%^
     %CSC_DEBUG_OPTIONS%^
     %GOOGLEEMAILUPLOADER_REFERENCES%^
     /out:"%DEBUG_BINDIR%\GoogleEmailUploader.exe"^
-    /resource:obj\GoogleEmailUploader.Resources.resources^
+    /win32icon:OpenImageResources\GMailIcon.ico^
+    /resource:obj\%LOCALE%\GoogleEmailUploader.Resources.Images.resources^
+    /resource:obj\%LOCALE%\GoogleEmailUploader.Resources.Strings.resources^
     /target:winexe^
     %GOOGLEEMAILUPLOADER_FILES%
 Csc.exe^
@@ -120,7 +158,9 @@ Csc.exe^
     %CSC_RELEASE_OPTIONS%^
     %GOOGLEEMAILUPLOADER_REFERENCES%^
     /out:"%RELEASE_BINDIR%\GoogleEmailUploader.exe"^
-    /resource:obj\GoogleEmailUploader.Resources.resources^
+    /win32icon:OpenImageResources\GMailIcon.ico^
+    /resource:obj\%LOCALE%\GoogleEmailUploader.Resources.Images.resources^
+    /resource:obj\%LOCALE%\GoogleEmailUploader.Resources.Strings.resources^
     /target:winexe^
     %GOOGLEEMAILUPLOADER_FILES%
 echo _____Done building GoogleEmailUploader_____
@@ -135,8 +175,8 @@ set OUTLOOKCLIENT_REFERENCES=^
     /FU mscorlib.dll^
     /FU System.dll
 set OUTLOOKCLIENT_FILES=^
-    assembly_info.cc^
-    outlook_client.cc
+    assembly_info.mcc^
+    outlook_client.mcc
 cl.exe^
     %CL_OPTIONS%^
     %CL_DEBUG_OPTIONS%^
@@ -173,8 +213,8 @@ set OUTLOOKEXPRESSCLIENT_REFERENCES=^
     /FU mscorlib.dll^
     /FU System.dll
 set OUTLOOKEXPRESSCLIENT_FILES=^
-    assembly_info.cc^
-    outlook_express_client.cc
+    assembly_info.mcc^
+    outlook_express_client.mcc
 cl.exe^
     %CL_OPTIONS%^
     %CL_DEBUG_OPTIONS%^
@@ -238,9 +278,10 @@ echo _____Done building ThunderbirdClient_____
 popd
 
 REM ************BUILD INSTALLER***********************
-makensis /DDEBUG Installer.nsi 
-makensis Installer.nsi 
-
+echo _____Building Installers_____
+makensis /V1 /DDEBUG /Dlocale=%LOCALE% OpenInstaller.nsi 
+makensis /V1 /Dlocale=%LOCALE% OpenInstaller.nsi 
+echo _____Done building Installers_____
 
 echo *************************************************************
 echo **************************Building done**********************

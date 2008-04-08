@@ -7,7 +7,6 @@ rmdir /S /Q OutlookExpressClient\Debug
 rmdir /S /Q OutlookExpressClient\Release
 rmdir /S /Q GoogleEmailUploader\obj
 rmdir /S /Q ThunderbirdClient\obj
-rmdir /S /Q GEMUTestScript\obj
 
 del /S /Q /F *.user
 del /Q /F /A:H *.suo

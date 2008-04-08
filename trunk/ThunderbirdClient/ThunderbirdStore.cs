@@ -25,6 +25,7 @@ namespace Google.Thunderbird {
     ThunderbirdProfile profile;
     IClient client;
     ArrayList folders;
+    ArrayList contacts;
     string persistName;
     string displayName;
     string storePath;
@@ -39,6 +40,7 @@ namespace Google.Thunderbird {
       this.client = profile.GetClient();
       this.storePath = storePath;
 
+      this.contacts = new ArrayList();
       this.folders = new ArrayList();
       this.PopulateStore();
     }
@@ -50,6 +52,7 @@ namespace Google.Thunderbird {
       this.displayName = this.persistName;
       this.profile = null;
       this.client = client;
+      this.contacts = new ArrayList();
       this.folders = new ArrayList();
 
       string folderName = Path.GetFileName(storePath);
@@ -84,6 +87,18 @@ namespace Google.Thunderbird {
     public IEnumerable Folders {
       get {
         return this.folders;
+      }
+    }
+
+    public uint ContactCount {
+      get {
+        return (uint)this.contacts.Count;
+      }
+    }
+
+    public IEnumerable Contacts {
+      get {
+        return this.contacts;
       }
     }
 

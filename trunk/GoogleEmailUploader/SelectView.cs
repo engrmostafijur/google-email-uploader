@@ -32,50 +32,111 @@ namespace GoogleEmailUploader {
     Upload,
   }
 
-  class GoogleEmailUploaderTreeNode : TreeNode {
+  /// <summary>
+  /// We extend the framework tree node so that we can store our model
+  /// within it.
+  /// </summary>
+  abstract class GemuTreeNode : TreeNode {
     internal readonly TreeNodeModel TreeNodeModel;
+    protected uint cummulativeCount;
 
-    internal GoogleEmailUploaderTreeNode(TreeNodeModel treeNodeModel) {
+    internal GemuTreeNode(TreeNodeModel treeNodeModel) {
       this.TreeNodeModel = treeNodeModel;
-      FolderModel folderModel = treeNodeModel as FolderModel;
-      if (folderModel != null) {
-        this.Text =
-            treeNodeModel.DisplayName + " ["
-                + folderModel.Folder.MailCount + "]";
-      } else {
-        this.Text = treeNodeModel.DisplayName;
-      }
-      this.Checked = treeNodeModel.IsSelected;
-      foreach (TreeNodeModel childTreeNodeModel in treeNodeModel.Children) {
-        GoogleEmailUploaderTreeNode childTreeNodeView =
-            new GoogleEmailUploaderTreeNode(childTreeNodeModel);
-        this.Nodes.Add(childTreeNodeView);
-      }
     }
 
-    void ChangeCheckedStateRec(bool isChecked) {
-      this.TreeNodeModel.IsSelected = isChecked;
-      this.Checked = isChecked;
-      foreach (GoogleEmailUploaderTreeNode childTreeViewNode in this.Nodes) {
-        childTreeViewNode.ChangeCheckedStateRec(isChecked);
-      }
-    }
+    internal abstract void ChangeCheckedStateRec(bool isChecked);
 
     internal void CustomChangeCheckedState(bool isChecked) {
       this.ChangeCheckedStateRec(isChecked);
       if (isChecked) {
-        GoogleEmailUploaderTreeNode parentIter =
-            this.Parent as GoogleEmailUploaderTreeNode;
+        GemuTreeNode parentIter =
+            this.Parent as GemuTreeNode;
         while (parentIter != null) {
           parentIter.TreeNodeModel.IsSelected = true;
           parentIter.Checked = true;
-          parentIter = parentIter.Parent as GoogleEmailUploaderTreeNode;
+          parentIter = parentIter.Parent as GemuTreeNode;
         }
+      }
+    }
+
+    internal uint CummmulativeCount {
+      get {
+        return this.cummulativeCount;
+      }
+    }
+
+    internal void AddStoreChild(GemuTreeNode storeTreeNode) {
+      Debug.Assert(this.TreeNodeModel is ClientModel);
+      Debug.Assert(storeTreeNode.TreeNodeModel is StoreModel);
+      this.cummulativeCount += storeTreeNode.CummmulativeCount;
+      this.Text =
+          this.TreeNodeModel.DisplayName + " ["
+              + cummulativeCount + "]";
+      this.Nodes.Add(storeTreeNode);
+    }
+  }
+
+  /// <summary>
+  /// This represents normal folder/client/store tree node. These are not
+  /// special like the contact tree node below.
+  /// </summary>
+  class NormalGemuTreeNode : GemuTreeNode {
+    internal NormalGemuTreeNode(TreeNodeModel treeNodeModel)
+      : base(treeNodeModel) {
+      uint cummulativeCount = 0;
+      FolderModel folderModel = treeNodeModel as FolderModel;
+      if (folderModel != null) {
+        cummulativeCount += folderModel.Folder.MailCount;
+      }
+      foreach (TreeNodeModel childTreeNodeModel in treeNodeModel.Children) {
+        GemuTreeNode childTreeNodeView =
+            new NormalGemuTreeNode(childTreeNodeModel);
+        this.Nodes.Add(childTreeNodeView);
+        cummulativeCount += childTreeNodeView.CummmulativeCount;
+      }
+      StoreModel storeModel = treeNodeModel as StoreModel;
+      if (storeModel != null && storeModel.Store.ContactCount > 0) {
+        ContactGemuTreeNode contactTreeNode =
+            new ContactGemuTreeNode(storeModel);
+        this.Nodes.Add(contactTreeNode);
+        cummulativeCount += contactTreeNode.CummmulativeCount;
+      }
+      this.Text =
+          treeNodeModel.DisplayName + " ["
+              + cummulativeCount + "]";
+      this.Checked = treeNodeModel.IsSelected;
+      this.cummulativeCount = cummulativeCount;
+    }
+
+    internal override void ChangeCheckedStateRec(bool isChecked) {
+      this.TreeNodeModel.IsSelected = isChecked;
+      this.Checked = isChecked;
+      foreach (GemuTreeNode childTreeNode in this.Nodes) {
+        childTreeNode.ChangeCheckedStateRec(isChecked);
       }
     }
   }
 
-  class GoogleEmailUploaderTreeView : TreeView {
+  /// <summary>
+  /// This represents the tree node corresponding to the contacts in the
+  /// particular client.
+  /// </summary>
+  class ContactGemuTreeNode : GemuTreeNode {
+    internal ContactGemuTreeNode(StoreModel storeModel)
+      : base(storeModel) {
+      this.Text = string.Format(Resources.ContactsTemplateText,
+                                storeModel.Store.ContactCount);
+      this.Checked = storeModel.IsContactSelected;
+      this.cummulativeCount = storeModel.Store.ContactCount;
+    }
+
+    internal override void ChangeCheckedStateRec(bool isChecked) {
+      ((StoreModel)this.TreeNodeModel).IsContactSelected = isChecked;
+      this.Checked = isChecked;
+    }
+  }
+
+  class GemuTreeView : TreeView {
     internal bool SuspendCheckEvents;
 
     // This is to prevent infinite recursion because we are responding to the
@@ -87,59 +148,39 @@ namespace GoogleEmailUploader {
     }
   }
 
-  class GoogleEmailUploaderCheckBox : CheckBox {
-    internal GoogleEmailUploaderTreeNode AssociatedTreeNode;
-
-    internal GoogleEmailUploaderCheckBox(
-        GoogleEmailUploaderTreeNode associatedTreeNode) {
-      this.AssociatedTreeNode = associatedTreeNode;
-    }
-  }
-
   class SelectView : Form {
     readonly GoogleEmailUploaderModel googleEmailUploaderModel;
 
-    Button cancelButton;
     Button nextButton;
     Button backButton;
-    bool isCustomized;
     Label selectionInfoLabel;
-
-    // Non-customized dialog
-    Label loggedInInfoLable;
-    Label emailIDLabel;
-    Label chooseEmailProgramsLabel;
-    LinkLabel customizeLabel;
-    ArrayList clientCheckBoxes;
 
     // Customized dialog
     Label selectEmailLabel;
-    LinkLabel addAnotherMailbox;
-    GoogleEmailUploaderTreeView selectionTreeView;
+    ArrayList addAnotherClientMailbox;
+    GemuTreeView selectionTreeView;
 
     // Label dailog
     CheckBox folderLabelMapping;
+    Label folderLabel;
     CheckBox archiveEverything;
     Label archiveEverythingLabel;
-
-    // Confirm dialog.
-    Label readyLabel;
-    Label confirmInstructionLabel;
 
     SelectViewResult result;
 
     internal SelectView(GoogleEmailUploaderModel googleEmailUploaderModel) {
       this.StartPosition = FormStartPosition.CenterScreen;
       this.googleEmailUploaderModel = googleEmailUploaderModel;
-      this.Text = Resources.GoogleEmailUploaderAppName;
+      this.Text = Resources.GoogleEmailUploaderAppNameText;
+      this.Icon = Resources.GMailIcon;
       this.MaximizeBox = false;
       this.FormBorderStyle = FormBorderStyle.FixedSingle;
       this.BackColor = Color.White;
       this.BackgroundImage = Resources.GoogleEmailUploaderBackgroundImage;
-      this.Size = new Size(480, 370);
+      this.Size = new Size(530, 370);
       this.InitializeComponent();
 
-      if (this.googleEmailUploaderModel.SelectedMailCount == 0) {
+      if (this.googleEmailUploaderModel.TotalSelectedItemCount == 0) {
         this.nextButton.Enabled = false;
       } else {
         this.nextButton.Enabled = true;
@@ -149,11 +190,8 @@ namespace GoogleEmailUploader {
     }
 
     void InitializeComponent() {
-      this.SuspendLayout();
-      this.isCustomized = false;
-
       // Selection Tree View
-      this.selectionTreeView = new GoogleEmailUploaderTreeView();
+      this.selectionTreeView = new GemuTreeView();
       this.selectionTreeView.ShowLines = true;
       this.selectionTreeView.Location = new Point(25, 85);
       this.selectionTreeView.Size = new System.Drawing.Size(250, 160);
@@ -164,64 +202,16 @@ namespace GoogleEmailUploader {
           | AnchorStyles.Bottom
           | AnchorStyles.Left
           | AnchorStyles.Right;
-
-      // loggedInInfo Label.
-      this.loggedInInfoLable = new Label();
-      this.loggedInInfoLable.Location = new Point(35, 60);
-      this.loggedInInfoLable.Size = new Size(150, 15);
-      this.loggedInInfoLable.Font = new Font("Arial", 9.25F);
-      this.loggedInInfoLable.Text = Resources.LoggedInInfo;
-
-      // emailID Label.
-      this.emailIDLabel = new Label();
-      this.emailIDLabel.Location = new Point(35, 75);
-      this.emailIDLabel.Size = new Size(250, 15);
-      this.emailIDLabel.Font = new Font("Arial", 9.25F, FontStyle.Bold);
-      this.emailIDLabel.Text = this.googleEmailUploaderModel.EmailID;
-
-      // chooseEmailPrograms Label.
-      this.chooseEmailProgramsLabel = new Label();
-      this.chooseEmailProgramsLabel.Location = new Point(35, 105);
-      this.chooseEmailProgramsLabel.Size = new Size(250, 30);
-      this.chooseEmailProgramsLabel.Font = new Font("Arial", 9.25F);
-      this.chooseEmailProgramsLabel.Text = Resources.SelectEmailPrograms;
-
-      // customize LinkLabel.
-      this.customizeLabel = new LinkLabel();
-      this.customizeLabel.Location = new Point(106, 119);
-      this.customizeLabel.Size = new Size(100, 15);
-      this.customizeLabel.Font = new Font("Arial", 9.25F);
-      this.customizeLabel.Text = Resources.CustomizeText;
-      this.customizeLabel.Click += new EventHandler(this.customizeLabel_Click);
-
-      // Select Email Clients.
-      int initialVerticalPosition = 160;
-      this.clientCheckBoxes = new ArrayList();
       foreach (TreeNodeModel treeNodeModel in
           this.googleEmailUploaderModel.ClientModels) {
-        GoogleEmailUploaderTreeNode googleEmailUploaderTreeNode =
-            new GoogleEmailUploaderTreeNode(treeNodeModel);
+        GemuTreeNode googleEmailUploaderTreeNode =
+            new NormalGemuTreeNode(treeNodeModel);
         this.selectionTreeView.Nodes.Add(googleEmailUploaderTreeNode);
-
-        GoogleEmailUploaderCheckBox tempCheckBox =
-            new GoogleEmailUploaderCheckBox(googleEmailUploaderTreeNode);
-        tempCheckBox.Location = new Point(35, initialVerticalPosition);
-        tempCheckBox.Size = new Size(200, 15);
-        tempCheckBox.Font = new Font("Arial", 9.25F);
-        tempCheckBox.Text = treeNodeModel.DisplayName;
-        tempCheckBox.CheckState =
-            googleEmailUploaderTreeNode.Checked
-                ? CheckState.Checked
-                : CheckState.Unchecked;
-        tempCheckBox.CheckedChanged +=
-            new EventHandler(this.loadedClientsCheckBox_CheckedChanged);
-        this.clientCheckBoxes.Add(tempCheckBox);
-        initialVerticalPosition += 16;
       }
 
       // Next Button
       this.nextButton = new Button();
-      this.nextButton.Location = new Point(30, 287);
+      this.nextButton.Location = new Point(120, 287);
       this.nextButton.Size = new Size(72, 23);
       this.nextButton.Text = Resources.NextText;
       this.nextButton.Font = new Font("Arial", 9.25F);
@@ -229,29 +219,49 @@ namespace GoogleEmailUploader {
       this.nextButton.Enabled = false;
       this.nextButton.Click += new EventHandler(this.nextButtonInSelect_Click);
 
-      // Cancel Button
-      this.cancelButton = new Button();
-      this.cancelButton.Location = new Point(120, 287);
-      this.cancelButton.Size = new Size(72, 23);
-      this.cancelButton.Font = new Font("Arial", 9.25F);
-      this.cancelButton.Text = Resources.CancelText;
-      this.cancelButton.FlatStyle = FlatStyle.System;
-      this.cancelButton.Click += new EventHandler(this.cancelButton_Click);
-
       // Back Button
       this.backButton = new Button();
-      this.backButton.Location = new Point(210, 287);
+      this.backButton.Location = new Point(30, 287);
       this.backButton.Size = new Size(72, 23);
       this.backButton.Text = Resources.BackText;
       this.backButton.Font = new Font("Arial", 9.25F);
       this.backButton.BackColor = SystemColors.Control;
       this.backButton.Click += new EventHandler(this.backButtonInSelect_Click);
 
-      this.addControlsForNonCustomizedSelectDialog();
+      // SelectEmail Label.
+      this.selectEmailLabel = new Label();
+      this.selectEmailLabel.Location = new Point(25, 60);
+      this.selectEmailLabel.Size = new Size(260, 15);
+      this.selectEmailLabel.Font = new Font("Arial", 9.25F);
+      this.selectEmailLabel.Text = Resources.SelectUploadFoldersText;
 
-      // Show the layout.
-      this.ResumeLayout(false);
-      this.PerformLayout();
+      this.selectionTreeView.AfterCheck +=
+          new TreeViewEventHandler(this.selectionTreeView_AfterCheck);
+
+      this.addAnotherClientMailbox = new ArrayList();
+      int initialVerticalOffset = 180;
+      foreach (ClientModel model in
+          this.googleEmailUploaderModel.ClientModels) {
+        if (model.Client.SupportsLoadingStore) {
+          LinkLabel addStoreLinkLabel = new LinkLabel();
+          addStoreLinkLabel.Text = string.Format(
+              Resources.AddMailBoxTemplateText,
+              model.Client.Name);
+          addStoreLinkLabel.Location = new Point(320, initialVerticalOffset);
+          addStoreLinkLabel.AutoSize = true;
+          addStoreLinkLabel.Click +=
+              new EventHandler(this.addAnotherMailbox_Click);
+          addStoreLinkLabel.Enabled = true;
+          addStoreLinkLabel.Font = new Font("Arial", 9.25F);
+          addStoreLinkLabel.Name = model.Client.Name;
+
+          initialVerticalOffset += 20;
+          this.addAnotherClientMailbox.Add(addStoreLinkLabel);
+        }
+      }
+
+
+      this.addControlsForNonCustomizedSelectDialog();
 
       this.ActiveControl = this.nextButton;
       this.AcceptButton = this.nextButton;
@@ -262,188 +272,63 @@ namespace GoogleEmailUploader {
       this.result = SelectViewResult.Restart;
     }
 
-    void createNonCustomizeDialogHeader() {
-      Font defaultFont = new Font("Arial", 9.5F);
-      Font separatorFont = new Font("Arial", 12F);
-      Color backColor = Color.FromArgb(229, 240, 254);
-      Color foreColor = Color.FromArgb(166, 166, 166);
-
-      Label signInLabel = new Label();
-      signInLabel.Location = new Point(25, 24);
-      signInLabel.Size = new Size(47, 16);
-      signInLabel.Font = defaultFont;
-      signInLabel.BackColor = backColor;
-      signInLabel.ForeColor = foreColor;
-      signInLabel.Text = Resources.SignInHeaderText;
-
-      Label separator1 = new Label();
-      separator1.Location = new Point(69, 23);
-      separator1.Size = new Size(11, 15);
-      separator1.Font = separatorFont;
-      separator1.BackColor = backColor;
-      separator1.ForeColor = foreColor;
-      separator1.Text = Resources.SeparatorText;
-
-      Label selectEmailLabel = new Label();
-      selectEmailLabel.Location = new Point(82, 24);
-      selectEmailLabel.Size = new Size(73, 15);
-      selectEmailLabel.Font = new Font("Arial", 9.5F, FontStyle.Bold);
-      selectEmailLabel.BackColor = backColor;
-      selectEmailLabel.Text = Resources.SelectEmailHeaderText;
-
-      Label separator2 = new Label();
-      separator2.Location = new Point(154, 23);
-      separator2.Size = new Size(11, 15);
-      separator2.Font = separatorFont;
-      separator2.BackColor = backColor;
-      separator2.ForeColor = foreColor;
-      separator2.Text = Resources.SeparatorText;
-
-      Label labelLabel = new Label();
-      labelLabel.Location = new Point(167, 24);
-      labelLabel.Size = new Size(43, 15);
-      labelLabel.ForeColor = foreColor;
-      labelLabel.BackColor = backColor;
-      labelLabel.Font = defaultFont;
-      labelLabel.Text = Resources.LabelHeaderText;
-
-      Label separator3 = new Label();
-      separator3.Location = new Point(207, 23);
-      separator3.Size = new Size(11, 15);
-      separator3.Font = separatorFont;
-      separator3.BackColor = backColor;
-      separator3.ForeColor = foreColor;
-      separator3.Text = Resources.SeparatorText;
-
-      Label uploadLabel = new Label();
-      uploadLabel.Location = new Point(221, 24);
-      uploadLabel.Size = new Size(46, 15);
-      uploadLabel.ForeColor = foreColor;
-      uploadLabel.BackColor = backColor;
-      uploadLabel.Font = defaultFont;
-      uploadLabel.Text = Resources.UploadHeaderText;
-
-      this.Controls.Add(signInLabel);
-      this.Controls.Add(separator1);
-      this.Controls.Add(selectEmailLabel);
-      this.Controls.Add(separator2);
-      this.Controls.Add(labelLabel);
-      this.Controls.Add(separator3);
-      this.Controls.Add(uploadLabel);
-    }
-
     void addControlsForNonCustomizedSelectDialog() {
-      this.createNonCustomizeDialogHeader();
+      Program.AddHeaderStrip(1, this.Controls);
 
       this.selectionInfoLabel = new Label();
-      this.selectionInfoLabel.Location = new Point(35, 250);
+      this.selectionInfoLabel.Location = new Point(25, 255);
       this.selectionInfoLabel.Font = new Font("Arial", 9.25F);
-      this.selectionInfoLabel.ForeColor = Color.FromArgb(166, 166, 166);
+      this.selectionInfoLabel.ForeColor = Program.DisabledGreyColor;
       this.selectionInfoLabel.AutoSize = true;
 
-      foreach (GoogleEmailUploaderCheckBox checkBox in this.clientCheckBoxes) {
-        this.Controls.Add(checkBox);
+      foreach (LinkLabel addMailBox in this.addAnotherClientMailbox) {
+        this.Controls.Add(addMailBox);
       }
       this.Controls.Add(this.nextButton);
       this.Controls.Add(this.backButton);
-      this.Controls.Add(this.cancelButton);
-      this.Controls.Add(this.customizeLabel);
-      this.Controls.Add(this.loggedInInfoLable);
-      this.Controls.Add(this.emailIDLabel);
-      this.Controls.Add(this.chooseEmailProgramsLabel);
-      this.Controls.Add(this.selectionInfoLabel);
-
-      this.UpdateSelectionInfoLabel();
-
-      this.ActiveControl = this.nextButton;
-      this.AcceptButton = this.nextButton;
-    }
-
-    void addControlsForCustomizedSelectDialog() {
-      this.createNonCustomizeDialogHeader();
-
-      this.selectionInfoLabel = new Label();
-      this.selectionInfoLabel.Location =
-          new Point(this.addAnotherMailbox.Right + 15, 255);
-      this.selectionInfoLabel.Font = new Font("Arial", 9.25F);
-      this.selectionInfoLabel.ForeColor = Color.FromArgb(166, 166, 166);
-      this.selectionInfoLabel.AutoSize = true;
-
-      this.Controls.Add(this.cancelButton);
-      this.Controls.Add(this.nextButton);
-      this.Controls.Add(this.selectEmailLabel);
-      this.Controls.Add(this.backButton);
       this.Controls.Add(this.selectionTreeView);
-      this.Controls.Add(this.addAnotherMailbox);
       this.Controls.Add(this.selectionInfoLabel);
+      this.Controls.Add(this.selectEmailLabel);
 
       this.UpdateSelectionInfoLabel();
 
       this.ActiveControl = this.nextButton;
       this.AcceptButton = this.nextButton;
-    }
+    } 
 
     void UpdateSelectionInfoLabel() {
+      string templateMessage;
+      if (this.googleEmailUploaderModel.SelectedContactCount == 1) {
+        if (this.googleEmailUploaderModel.SelectedEmailCount == 1) {
+          templateMessage = Resources.SelectionInfoSSTemplateText;
+        } else {
+          templateMessage = Resources.SelectionInfoSPTemplateText;
+        }
+      } else {
+        if (this.googleEmailUploaderModel.SelectedEmailCount == 1) {
+          templateMessage = Resources.SelectionInfoPSTemplateText;
+        } else {
+          templateMessage = Resources.SelectionInfoPPTemplateText;
+        }
+      }
       this.selectionInfoLabel.Text =
-          string.Format(Resources.SelectionInfoTemplateText,  
-                        this.googleEmailUploaderModel.SelectedMailCount,
+          string.Format(templateMessage,
+                        this.googleEmailUploaderModel.SelectedContactCount,
+                        this.googleEmailUploaderModel.SelectedEmailCount,
                         this.googleEmailUploaderModel.BallParkEstimate());
     }
 
-    void loadedClientsCheckBox_CheckedChanged(object sender, EventArgs e) {
-      GoogleEmailUploaderCheckBox checkBox =
-          (GoogleEmailUploaderCheckBox)sender;
-      this.selectionTreeView.SuspendCheckEvents = true;
-      checkBox.AssociatedTreeNode.CustomChangeCheckedState(
-          checkBox.CheckState == CheckState.Checked);
-      this.selectionTreeView.SuspendCheckEvents = false;
-      this.googleEmailUploaderModel.ComputeMailCounts();
-      this.UpdateSelectionInfoLabel();
-      if (this.googleEmailUploaderModel.SelectedMailCount == 0) {
-        this.nextButton.Enabled = false;
-      } else {
-        this.nextButton.Enabled = true;
-      }
-    }
-
-    void customizeLabel_Click(object sender, EventArgs e) {
-      this.Controls.Clear();
-      this.isCustomized = true;
-
-      // SelectEmail Label.
-      this.selectEmailLabel = new Label();
-      this.selectEmailLabel.Location = new Point(35, 60);
-      this.selectEmailLabel.Size = new Size(260, 15);
-      this.selectEmailLabel.Font = new Font("Arial", 9.25F, FontStyle.Bold);
-      this.selectEmailLabel.Text = Resources.SelectUploadEmailsText;
-
-      this.selectionTreeView.AfterCheck +=
-          new TreeViewEventHandler(this.selectionTreeView_AfterCheck);
-      this.selectionTreeView.AfterSelect +=
-      new TreeViewEventHandler(this.selectionTreeView_AfterSelect);
-
-      // AddAnotherMailbox Label
-      this.addAnotherMailbox = new LinkLabel();
-      this.addAnotherMailbox.Location = new Point(33, 255);
-      this.addAnotherMailbox.AutoSize = true;
-      this.addAnotherMailbox.Text = Resources.AddStore;
-      this.addAnotherMailbox.Enabled = false;
-      this.addAnotherMailbox.Click +=
-          new EventHandler(this.addAnotherMailbox_Click);
-
-      this.addControlsForCustomizedSelectDialog();
-    }
-
     void nextButtonInSelect_Click(object sender, EventArgs e) {
+      this.Controls.Clear();
 
       this.backButton.Click -= new EventHandler(this.backButtonInSelect_Click);
       this.backButton.Click +=
           new EventHandler(this.backButtonInLabelDialog_Click);
 
-      this.Controls.Clear();
       this.nextButton.Click -= new EventHandler(this.nextButtonInSelect_Click);
       this.nextButton.Click +=
           new EventHandler(this.nextButtonInLabelDialog_Click);
+      this.nextButton.Text = Resources.UploadText;
 
       this.folderLabelMapping = new CheckBox();
       this.folderLabelMapping.Checked =
@@ -453,100 +338,39 @@ namespace GoogleEmailUploader {
       this.folderLabelMapping.Font = new Font("Arial", 9.25F, FontStyle.Bold);
       this.folderLabelMapping.Text = Resources.FolderLabelCheckBoxText;
 
+      this.folderLabel = new Label();
+      this.folderLabel.Location =
+          new Point(53, this.folderLabelMapping.Bottom + 5);
+      this.folderLabel.Size = new Size(220, 50);
+      this.folderLabel.Font = new Font("Arial", 9.25F);
+      this.folderLabel.Text = Resources.FolderInfoText;
+
       this.archiveEverything = new CheckBox();
       this.archiveEverything.Checked =
           this.googleEmailUploaderModel.IsArchiveEverything;
-      this.archiveEverything.Location = new Point(35, 90);
+      this.archiveEverything.Location =
+          new Point(35, this.folderLabel.Bottom + 10);
       this.archiveEverything.Size = new Size(220, 16);
       this.archiveEverything.Font = new Font("Arial", 9.25F, FontStyle.Bold);
       this.archiveEverything.Text = Resources.ArchiveEverythingText;
 
       this.archiveEverythingLabel = new Label();
-      this.archiveEverythingLabel.Location = new Point(48, 107);
-      this.archiveEverythingLabel.Size = new Size(220, 30);
+      this.archiveEverythingLabel.Location =
+          new Point(53, this.archiveEverything.Bottom + 5);
+      this.archiveEverythingLabel.Size = new Size(220, 60);
       this.archiveEverythingLabel.Font = new Font("Arial", 9.25F);
-      this.archiveEverythingLabel.Text = Resources.ArchiveEverythingInfo;
+      this.archiveEverythingLabel.Text = Resources.ArchiveEverythingInfoText;
 
       this.addControlsForLabelDialog();
     }
 
-    void createSelectLabelDialogHeader() {
-      Font defaultFont = new Font("Arial", 9.5F);
-      Font separatorFont = new Font("Arial", 12F);
-      Color backColor = Color.FromArgb(229, 240, 254);
-      Color foreColor = Color.FromArgb(166, 166, 166);
-
-      Label signInLabel = new Label();
-      signInLabel.Location = new Point(25, 24);
-      signInLabel.Size = new Size(47, 16);
-      signInLabel.Font = defaultFont;
-      signInLabel.BackColor = backColor;
-      signInLabel.ForeColor = foreColor;
-      signInLabel.Text = Resources.SignInHeaderText;
-
-      Label separator1 = new Label();
-      separator1.Location = new Point(69, 23);
-      separator1.Size = new Size(11, 15);
-      separator1.Font = separatorFont;
-      separator1.BackColor = backColor;
-      separator1.ForeColor = foreColor;
-      separator1.Text = Resources.SeparatorText;
-
-      Label selectEmailLabel = new Label();
-      selectEmailLabel.Location = new Point(82, 24);
-      selectEmailLabel.Size = new Size(71, 15);
-      selectEmailLabel.Font = defaultFont;
-      selectEmailLabel.ForeColor = foreColor;
-      selectEmailLabel.BackColor = backColor;
-      selectEmailLabel.Text = Resources.SelectEmailHeaderText;
-
-      Label separator2 = new Label();
-      separator2.Location = new Point(152, 23);
-      separator2.Size = new Size(11, 15);
-      separator2.Font = separatorFont;
-      separator2.BackColor = backColor;
-      separator2.ForeColor = foreColor;
-      separator2.Text = Resources.SeparatorText;
-
-      Label labelLabel = new Label();
-      labelLabel.Location = new Point(167, 24);
-      labelLabel.Size = new Size(46, 15);
-      labelLabel.BackColor = backColor;
-      labelLabel.Font = new Font("Arial", 9.5F, FontStyle.Bold);
-      labelLabel.Text = Resources.LabelHeaderText;
-
-      Label separator3 = new Label();
-      separator3.Location = new Point(210, 23);
-      separator3.Size = new Size(11, 15);
-      separator3.Font = separatorFont;
-      separator3.BackColor = backColor;
-      separator3.ForeColor = foreColor;
-      separator3.Text = Resources.SeparatorText;
-
-      Label uploadLabel = new Label();
-      uploadLabel.Location = new Point(224, 24);
-      uploadLabel.Size = new Size(46, 15);
-      uploadLabel.ForeColor = foreColor;
-      uploadLabel.BackColor = backColor;
-      uploadLabel.Font = defaultFont;
-      uploadLabel.Text = Resources.UploadHeaderText;
-
-      this.Controls.Add(signInLabel);
-      this.Controls.Add(separator1);
-      this.Controls.Add(selectEmailLabel);
-      this.Controls.Add(separator2);
-      this.Controls.Add(labelLabel);
-      this.Controls.Add(separator3);
-      this.Controls.Add(uploadLabel);
-    }
-
     void addControlsForLabelDialog() {
-      this.createSelectLabelDialogHeader();
+      Program.AddHeaderStrip(2, this.Controls);
 
       this.Controls.Add(this.nextButton);
       this.Controls.Add(this.backButton);
-      this.Controls.Add(this.cancelButton);
       this.Controls.Add(this.folderLabelMapping);
+      this.Controls.Add(this.folderLabel);
       this.Controls.Add(this.archiveEverything);
       this.Controls.Add(this.archiveEverythingLabel);
 
@@ -564,113 +388,12 @@ namespace GoogleEmailUploader {
       this.nextButton.Click -=
           new EventHandler(this.nextButtonInLabelDialog_Click);
       this.nextButton.Click += new EventHandler(this.nextButtonInSelect_Click);
-      if (this.isCustomized) {
-        this.addControlsForCustomizedSelectDialog();
-      } else {
-        this.addControlsForNonCustomizedSelectDialog();
-      }
+
+      this.nextButton.Text = Resources.NextText;
+      this.addControlsForNonCustomizedSelectDialog();
     }
 
     void nextButtonInLabelDialog_Click(object sender, EventArgs e) {
-      this.Controls.Clear();
-
-      this.nextButton.Text = Resources.UploadText;
-      this.nextButton.Click -=
-          new EventHandler(this.nextButtonInLabelDialog_Click);
-      this.nextButton.Click +=
-          new EventHandler(this.nextButtonInConfirmDialog_Click);
-
-      this.backButton.Click -=
-          new EventHandler(this.backButtonInLabelDialog_Click);
-      this.backButton.Click +=
-          new EventHandler(this.backButtonInConfirmDialog_Click);
-
-      this.readyLabel = new Label();
-      this.readyLabel.Location = new Point(35, 60);
-      this.readyLabel.Size = new Size(200, 15);
-      this.readyLabel.Font = new Font("Arial", 9.25F, FontStyle.Bold);
-      this.readyLabel.Text = Resources.ReadyText;
-
-      this.confirmInstructionLabel = new Label();
-      this.confirmInstructionLabel.Location = new Point(35, 100);
-      this.confirmInstructionLabel.Size = new Size(200, 15);
-      this.confirmInstructionLabel.Font = new Font("Arial", 9.25F);
-      this.confirmInstructionLabel.Text = Resources.ConfirmInstructionText;
-
-      this.addControlsForConfirmDialog();
-    }
-
-    void createUploadDialogHeader() {
-      Font defaultFont = new Font("Arial", 9.5F);
-      Font separatorFont = new Font("Arial", 12F);
-      Color backColor = Color.FromArgb(229, 240, 254);
-      Color foreColor = Color.FromArgb(166, 166, 166);
-
-      Label signInLabel = new Label();
-      signInLabel.Location = new Point(25, 24);
-      signInLabel.Size = new Size(47, 16);
-      signInLabel.Font = defaultFont;
-      signInLabel.BackColor = backColor;
-      signInLabel.ForeColor = foreColor;
-      signInLabel.Text = Resources.SignInHeaderText;
-
-      Label separator1 = new Label();
-      separator1.Location = new Point(69, 23);
-      separator1.Size = new Size(11, 15);
-      separator1.Font = separatorFont;
-      separator1.BackColor = backColor;
-      separator1.ForeColor = foreColor;
-      separator1.Text = Resources.SeparatorText;
-
-      Label selectEmailLabel = new Label();
-      selectEmailLabel.Location = new Point(82, 24);
-      selectEmailLabel.Size = new Size(71, 15);
-      selectEmailLabel.Font = defaultFont;
-      selectEmailLabel.ForeColor = foreColor;
-      selectEmailLabel.BackColor = backColor;
-      selectEmailLabel.Text = Resources.SelectEmailHeaderText;
-
-      Label separator2 = new Label();
-      separator2.Location = new Point(152, 23);
-      separator2.Size = new Size(11, 15);
-      separator2.Font = separatorFont;
-      separator2.BackColor = backColor;
-      separator2.ForeColor = foreColor;
-      separator2.Text = Resources.SeparatorText;
-
-      Label labelLabel = new Label();
-      labelLabel.Location = new Point(165, 24);
-      labelLabel.Size = new Size(44, 15);
-      labelLabel.BackColor = backColor;
-      labelLabel.Font = defaultFont;
-      labelLabel.ForeColor = foreColor;
-      labelLabel.Text = Resources.LabelHeaderText;
-
-      Label separator3 = new Label();
-      separator3.Location = new Point(205, 23);
-      separator3.Size = new Size(11, 15);
-      separator3.Font = separatorFont;
-      separator3.BackColor = backColor;
-      separator3.ForeColor = foreColor;
-      separator3.Text = Resources.SeparatorText;
-
-      Label uploadLabel = new Label();
-      uploadLabel.Location = new Point(221, 24);
-      uploadLabel.Size = new Size(50, 15);
-      uploadLabel.BackColor = backColor;
-      uploadLabel.Font = new Font(defaultFont, FontStyle.Bold);
-      uploadLabel.Text = Resources.UploadHeaderText;
-
-      this.Controls.Add(signInLabel);
-      this.Controls.Add(separator1);
-      this.Controls.Add(selectEmailLabel);
-      this.Controls.Add(separator2);
-      this.Controls.Add(labelLabel);
-      this.Controls.Add(separator3);
-      this.Controls.Add(uploadLabel);
-    }
-
-    void nextButtonInConfirmDialog_Click(object sender, EventArgs e) {
       this.googleEmailUploaderModel.SetFolderToLabelMapping(
           this.folderLabelMapping.Checked);
       this.googleEmailUploaderModel.SetArchiving(
@@ -679,73 +402,35 @@ namespace GoogleEmailUploader {
       this.result = SelectViewResult.Upload;
     }
 
-    void backButtonInConfirmDialog_Click(object sender, EventArgs e) {
-      this.Controls.Clear();
-
-      this.nextButton.Text = Resources.NextText;
-      this.nextButton.Click +=
-          new EventHandler(this.nextButtonInLabelDialog_Click);
-      this.nextButton.Click -=
-          new EventHandler(this.nextButtonInConfirmDialog_Click);
-
-      this.backButton.Click +=
-          new EventHandler(this.backButtonInLabelDialog_Click);
-      this.backButton.Click -=
-          new EventHandler(this.backButtonInConfirmDialog_Click);
-
-      this.addControlsForLabelDialog();
-    }
-
-    void addControlsForConfirmDialog() {
-      this.createUploadDialogHeader();
-      this.Controls.Add(this.readyLabel);
-      this.Controls.Add(this.confirmInstructionLabel);
-      this.Controls.Add(this.backButton);
-      this.Controls.Add(this.nextButton);
-      this.Controls.Add(this.cancelButton);
-
-      this.ActiveControl = this.nextButton;
-      this.AcceptButton = this.nextButton;
-    }
-
-    void cancelButton_Click(object sender, EventArgs e) {
-      this.Close();
-      this.result = SelectViewResult.Cancel;
-    }
-
     void selectionTreeView_AfterCheck(object sender, TreeViewEventArgs e) {
       this.selectionTreeView.SuspendCheckEvents = true;
-      GoogleEmailUploaderTreeNode node = (GoogleEmailUploaderTreeNode)e.Node;
+      GemuTreeNode node = (GemuTreeNode)e.Node;
       node.CustomChangeCheckedState(node.Checked);
       this.selectionTreeView.SuspendCheckEvents = false;
-      this.googleEmailUploaderModel.ComputeMailCounts();
+      this.googleEmailUploaderModel.ComputeEmailContactCounts();
       this.UpdateSelectionInfoLabel();
-      if (this.googleEmailUploaderModel.SelectedMailCount == 0) {
+      if (this.googleEmailUploaderModel.TotalSelectedItemCount == 0) {
         this.nextButton.Enabled = false;
       } else {
         this.nextButton.Enabled = true;
       }
     }
 
-    void selectionTreeView_AfterSelect(object sender, TreeViewEventArgs e) {
-      GoogleEmailUploaderTreeNode googleEmailUploaderTreeNode =
-          (GoogleEmailUploaderTreeNode)e.Node;
-      this.addAnotherMailbox.Enabled =
-          googleEmailUploaderTreeNode.TreeNodeModel is ClientModel;
-    }
-
     void addAnotherMailbox_Click(object sender, EventArgs e) {
-      GoogleEmailUploaderTreeNode googleEmailUploaderTreeNode = null;
+      GemuTreeNode clientModelTreeNode = null;
       ClientModel clientModel = null;
-      foreach (GoogleEmailUploaderTreeNode googleEmailUploaderTreeNodeIter in
+      string senderName = ((LinkLabel)sender).Name;
+      foreach (GemuTreeNode googleEmailUploaderTreeNodeIter in
           this.selectionTreeView.Nodes) {
-        if (!googleEmailUploaderTreeNodeIter.IsSelected) {
-          continue;
+        ClientModel tempClientModel =
+            (ClientModel)googleEmailUploaderTreeNodeIter.TreeNodeModel;
+        if (tempClientModel.Client.Name == senderName) {
+          clientModel = tempClientModel;
+          clientModelTreeNode = googleEmailUploaderTreeNodeIter;
+          break;
         }
-        googleEmailUploaderTreeNode = googleEmailUploaderTreeNodeIter;
-        clientModel = (ClientModel)googleEmailUploaderTreeNode.TreeNodeModel;
       }
-      Debug.Assert(googleEmailUploaderTreeNode != null && clientModel != null);
+      Debug.Assert(clientModelTreeNode != null && clientModel != null);
       OpenFileDialog openFileDialog = new OpenFileDialog();
       openFileDialog.Multiselect = false;
       openFileDialog.CheckFileExists = true;
@@ -754,21 +439,21 @@ namespace GoogleEmailUploader {
         StoreModel addedStoreModel =
             clientModel.OpenStore(openFileDialog.FileName);
         if (addedStoreModel != null) {
-          GoogleEmailUploaderTreeNode addedStoreTreeNode =
-              new GoogleEmailUploaderTreeNode(addedStoreModel);
-          googleEmailUploaderTreeNode.Nodes.Add(addedStoreTreeNode);
-          if (googleEmailUploaderTreeNode.Checked) {
+          GemuTreeNode addedStoreTreeNode =
+              new NormalGemuTreeNode(addedStoreModel);
+          clientModelTreeNode.AddStoreChild(addedStoreTreeNode);
+          if (clientModelTreeNode.Checked) {
             addedStoreTreeNode.Checked = true;
           }
-          this.googleEmailUploaderModel.BuildFolderModelFlatList();
+          this.googleEmailUploaderModel.BuildModelFlatList();
           this.UpdateSelectionInfoLabel();
-          if (this.googleEmailUploaderModel.SelectedMailCount == 0) {
+          if (this.googleEmailUploaderModel.TotalSelectedItemCount == 0) {
             this.nextButton.Enabled = false;
           } else {
             this.nextButton.Enabled = true;
           }
         } else {
-          MessageBox.Show(string.Format(Resources.CouldNotOpenStoreTemplate,
+          MessageBox.Show(string.Format(Resources.CouldNotOpenStoreTemplateText,
                                         openFileDialog.FileName));
         }
       }

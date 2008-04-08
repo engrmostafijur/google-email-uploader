@@ -26,12 +26,18 @@
 
 #using "GoogleEmailUploader.exe"
 
+using ::Google::MailClientInterfaces::ContactRelation;
+using ::Google::MailClientInterfaces::EmailContact;
 using ::Google::MailClientInterfaces::FolderKind;
 using ::Google::MailClientInterfaces::IClient;
 using ::Google::MailClientInterfaces::IClientFactory;
+using ::Google::MailClientInterfaces::IContact;
 using ::Google::MailClientInterfaces::IFolder;
 using ::Google::MailClientInterfaces::IMail;
+using ::Google::MailClientInterfaces::IMContact;
 using ::Google::MailClientInterfaces::IStore;
+using ::Google::MailClientInterfaces::PhoneContact;
+using ::Google::MailClientInterfaces::PostalContact;
 
 using ::System::Collections::ArrayList;
 using ::System::Collections::IEnumerable;
@@ -118,6 +124,7 @@ namespace OutlookClient {
 __gc class OutlookStore;
 __gc class OutlookFolder;
 __gc class OutlookEMailMessage;
+__gc class OutlookContact;
 
 // This class encapsulates helper functions for using the outlook MAPI.
 // This class is also responsible for loading PST files and cleaning up the
@@ -152,17 +159,24 @@ __gc class COutlookAPI {
   // Returns list of all the profile names in the outlook
   ArrayList *GetProfileNames();
 
+  // Returns the name of default profile
+  String *GetDefaultProfileName();
+
   // Returns NULL if the session could not be opened.
   LPMAPISESSION OpenSession(String *profile_name);
 
   // Returns NULL as root folder in case of error.
   IMAPIFolder *GetRootFolder(IMsgStore *msg_store);
 
-  // Some folders such as Calender etc non mail folders.
-  bool IsMailFolder(String *folder_name);
+  // Fills the 0xFFFFFFFF entries in the Contacts table columns.
+  // If it can't fill returns false.
+  bool FillContactsContentTableCols(IMsgStore *msg_store,
+                                    SPropTagArray *prop_tag_array);
 
-  FolderKind GetFolderKind(String *folder_name);
-  IMAPITable *CreateMAPIContentTable(IMAPIFolder *MAPI_folder);
+  IMAPITable *CreateMAPIMailContentTable(IMAPIFolder *MAPI_folder);
+
+  IMAPITable *CreateMAPIContactsContentTable(IMAPIFolder *MAPI_folder,
+                                             SPropTagArray *prop_tag_array);
 
   // Create a stream on Widows global memory.
   IStream *CreateStream();
@@ -170,6 +184,38 @@ __gc class COutlookAPI {
   // Creates a temporary profile for opening the PST file.
   // If unsuccessful returns NULL.
   String *OpenTempPSTProfile(String *pst_file_path);
+
+  static String *EntryIdToString(SBinary entryId);
+
+  void MAPIFree(void *ptr) {
+    Debug::Assert(MAPI_library_ != NULL);
+    MAPI_free_buffer_(ptr);
+  }
+
+ private public:
+  static String *kNoteIPF = "IPF.Note";
+  static String *kContactsIPF = "IPF.Contact";
+  static String *kDeletedItems = "Deleted Items";
+  static String *kDrafts = "Drafts";
+  static String *kJunkEmail = "Junk E-mail";
+  static String *kOutbox = "Outbox";
+  static String *kSentItems = "Sent Items";
+  static String *kInbox = "Inbox";
+  static String *kTempProfilePrefix = "Temp PST Profile - ";
+
+  static String *kAssistantPhoneLabel = "assistant";
+  static String *kBusiness2PhoneLabel = "work 2";
+  static String *kCallbackPhoneLabel = "call back";
+  static String *kCarPhoneLabel = "car";
+  static String *kCompanyPhoneLabel = "company";
+  static String *kHome2PhoneLabel = "home 2";
+  static String *kISDNLabel = "ISDN";
+  static String *kPrimaryFaxLabel = "primary fax";
+  static String *kPrimaryPhoneLabel = "primary";
+  static String *kRadioPhoneLabel = "radio";
+  static String *kTelexPhoneLabel = "telex";
+  static String *kTtytddPhoneLabel = "TTYTDD";
+  static String *kHexMap __gc [];
 
  private:
   // This function finds the Outlook dll from registry and loads
@@ -191,19 +237,6 @@ __gc class COutlookAPI {
   IConverterSession *converter_session_;
   int profile_counter_;
   ArrayList *temp_profile_names_;
-
-  static String *kCalendar = "Calendar";
-  static String *kContacts = "Contacts";
-  static String *kDeletedItems = "Deleted Items";
-  static String *kDrafts = "Drafts";
-  static String *kJournal = "Journal";
-  static String *kJunkEmail = "Junk E-mail";
-  static String *kNotes = "Notes";
-  static String *kOutbox = "Outbox";
-  static String *kSentItems = "Sent Items";
-  static String *kTasks = "Tasks";
-  static String *kInbox = "Inbox";
-  static String *kTempProfilePrefix = "Temp PST Profile - ";
 };
 
 // Client owns all the profiles and outlook API.
@@ -226,6 +259,14 @@ __gc public class OutlookClient : public IClient {
     return loaded_store_file_names_;
   }
 
+  __property bool get_SupportsContacts(){
+    return true;
+  }
+  
+  __property bool get_SupportsLoadingStore() {
+    return true;
+  }
+
   IStore* OpenStore(String *filename);
   void Dispose();
 
@@ -240,6 +281,7 @@ __gc public class OutlookClient : public IClient {
   COutlookAPI *outlook_API_;
   ArrayList *profiles_;
   ArrayList *stores_;
+  ArrayList *contacts_;
   ArrayList *loaded_store_file_names_;
 };
 
@@ -289,10 +331,28 @@ __gc class OutlookStore : public IStore {
     return outlook_profile_->Client;
   }
 
+  __property IEnumerable *get_Contacts() {
+    Debug::Assert(outlook_profile_ != NULL);
+    return contacts_;
+  }
+
+  __property unsigned int get_ContactCount() {
+    Debug::Assert(outlook_profile_ != NULL);
+    return static_cast<unsigned int>(contacts_->Count);
+  }
+
   __property IEnumerable *get_Folders();
 
  public private:
   void Dispose();
+
+  FolderKind GetFolderKind(SBinary folder_entry_id);
+
+  // Some folders such as Calender etc non mail folders.
+  bool IsMailFolder(SPropValue container_class);
+
+  // Does the folder contain contacts.
+  bool IsContactsFolder(SPropValue container_class);
 
   __property OutlookProfile *get_Profile() {
     Debug::Assert(outlook_profile_ != NULL);
@@ -300,17 +360,33 @@ __gc class OutlookStore : public IStore {
   }
 
   // Returns the list of subfolders of the parent folder using the MAPI
-  ArrayList *GetSubFolders(IMAPIFolder *MAPI_folder,
-                           OutlookFolder *parentFolder);
+  ArrayList *GetMailSubFolders(IMAPIFolder *MAPI_folder,
+                               OutlookFolder *parentFolder);
 
  private:
+  void AddContactsUnder(IMAPIFolder *MAPI_folder,
+                        SPropTagArray *prop_tag_array,
+                        ArrayList *contactsList);
+
+  // Returns the list of subfolders of the parent folder using the MAPI
+  ArrayList *GetContacts();
+
+  OutlookContact* CreateContact(LPSRow contact_row);
+
   // outlook_profile_ == NULL indicates this object has been disposed.
   OutlookProfile *outlook_profile_;
   String *persist_name_;
   String *display_name_;
   IMsgStore *MAPI_store_;
   IMAPIFolder *MAPI_root_folder_;
+
+  SBinary inbox_entry_id_;
+  SPropValue *sent_items_entry_id_;
+  SPropValue *drafts_entry_id_;
+  SPropValue *deleted_items_entry_id_;
+
   ArrayList *folders_;
+  ArrayList *contacts_;
 };
 
 // Folder owns all the sub folders.
@@ -319,6 +395,7 @@ __gc class OutlookFolder : public IFolder {
   OutlookFolder(OutlookStore *outlook_store,
                 OutlookFolder *parent_folder,
                 String *name,
+                FolderKind folder_kind,
                 IMAPIFolder *MAPI_folder,
                 unsigned int message_count);
 
@@ -363,10 +440,10 @@ __gc class OutlookFolder : public IFolder {
     return MAPI_folder_;
   }
 
-  IMAPITable *CreateMAPIContentTable() {
+  IMAPITable *CreateMAPIMailContentTable() {
     Debug::Assert(outlook_store_ != NULL);
-    return InternalStore->Profile->Client->OutlookAPI->CreateMAPIContentTable(
-        MAPI_folder_);
+    return InternalStore->Profile->Client->OutlookAPI->
+        CreateMAPIMailContentTable(MAPI_folder_);
   }
 
  private:
@@ -384,7 +461,7 @@ __gc class OutlookFolder : public IFolder {
 __gc class OutlookEMailMessage : public IMail {
  public:
   OutlookEMailMessage(OutlookFolder *outlook_folder,
-                      unsigned int message_row_id,
+                      String *message_id,
                       unsigned int message_size,
                       bool is_read,
                       bool is_flagged,
@@ -404,7 +481,7 @@ __gc class OutlookEMailMessage : public IMail {
 
   __property String *get_MailId() {
     Debug::Assert(outlook_folder_ != NULL);
-    return message_row_id_.ToString();
+    return message_id_;
   }
 
   __property bool get_IsRead() {
@@ -427,7 +504,7 @@ __gc class OutlookEMailMessage : public IMail {
  private:
   // outlook_folder_ == NULL implies this is disposed.
   OutlookFolder *outlook_folder_;
-  unsigned int message_row_id_;
+  String *message_id_;
   unsigned int message_size_;
   bool is_read_;
   bool is_flagged_;
@@ -451,7 +528,7 @@ __gc class OutlookEMailEnumerator : public IEnumerator, public IDisposable {
  private:
   OutlookFolder *outlook_folder_;
   IMAPITable *MAPI_content_table_;
-  unsigned int curr_message_row_id_;
+  String *curr_message_id_;
   unsigned int curr_message_size_;
   bool curr_message_is_read_;
   bool curr_message_is_flagged_;
@@ -473,6 +550,100 @@ __gc class OutlookEMailEnumerable : public IEnumerable {
   OutlookFolder *outlook_folder_;
 };
 
+__gc class OutlookContact : public IContact {
+ public:
+  OutlookContact(String *contact_id,
+                 String *title,
+                 String *organization_name,
+                 String *organization_title,
+                 String *home_page_url,
+                 String *notes,
+                 ArrayList *email_addresses,
+                 ArrayList *im_identities,
+                 ArrayList *phone_number,
+                 ArrayList *postal_addresses) {
+    Debug::Assert(contact_id != NULL &&
+                  title != NULL);
+    contact_id_ = contact_id;
+    title_ = title;
+    organization_name_ = organization_name;
+    organization_title_ = organization_title;
+    home_page_url_ = home_page_url;
+    notes_ = notes;
+    email_addresses_ = email_addresses;
+    im_identities_ = im_identities;
+    phone_numbers_ = phone_number;
+    postal_addresses_ = postal_addresses;
+  }
+
+  void Dispose() {
+    // We dont follow dispose pattern for the contacts because they are loaded
+    // at init of the store and are done with when process exit.
+  }
+
+  __property String *get_ContactId() {
+    Debug::Assert(contact_id_ != NULL);
+    return contact_id_;
+  }
+
+  __property String *get_Title() {
+    Debug::Assert(contact_id_ != NULL);
+    return title_;
+  }
+
+  __property String *get_OrganizationTitle() {
+    Debug::Assert(contact_id_ != NULL);
+    return organization_title_;
+  }
+
+  __property String *get_OrganizationName() {
+    Debug::Assert(contact_id_ != NULL);
+    return organization_name_;
+  }
+
+  __property String *get_HomePageUrl() {
+    Debug::Assert(contact_id_ != NULL);
+    return home_page_url_;
+  }
+
+  __property String *get_Notes() {
+    Debug::Assert(contact_id_ != NULL);
+    return notes_;
+  }
+
+  __property IEnumerable *get_EmailAddresses() {
+    Debug::Assert(contact_id_ != NULL);
+    return email_addresses_;
+  }
+
+  __property IEnumerable *get_IMIdentities() {
+    Debug::Assert(contact_id_ != NULL);
+    return im_identities_;
+  }
+
+  __property IEnumerable *get_PhoneNumbers() {
+    Debug::Assert(contact_id_ != NULL);
+    return phone_numbers_;
+  }
+
+  __property IEnumerable *get_PostalAddresses() {
+    Debug::Assert(contact_id_ != NULL);
+    return postal_addresses_;
+  }
+
+ private:
+  String *title_;
+  String *notes_;
+  String *contact_id_;
+  String *organization_name_;
+  String *organization_title_;
+  String *home_page_url_;
+  ArrayList *email_addresses_;
+  ArrayList *im_identities_;
+  ArrayList *phone_numbers_;
+  ArrayList *postal_addresses_;
+};
+
 __gc class OutlookClientFactory : public IClientFactory {
 public:
   OutlookClientFactory() {
@@ -480,7 +651,7 @@ public:
     clientProcessNames->Add(new String("outlook"));
   }
 
-  IEnumerable *get_ClientProcessNames(){
+  __property IEnumerable *get_ClientProcessNames(){
     return clientProcessNames;
   }
 
