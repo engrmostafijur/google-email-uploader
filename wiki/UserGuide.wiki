@@ -21,7 +21,7 @@ The Email Uploader is Apache 2.0 licensed open source software, and is governed 
     * Google Apps Education Edition
     * Google Apps Partner Edition
   * Your domain administrator must enable end user migration in the Google Apps administrator console under the Advanced Settings page.
-    * Microsoft .NET 2.0 or higher.  If you do not have .NET 2.0 installed, the installer will install it for you.
+  * Microsoft .NET 2.0 or higher.  If you do not have .NET 2.0 installed, the installer will install it for you.
 
 ==Email Program Compatibility==
 
